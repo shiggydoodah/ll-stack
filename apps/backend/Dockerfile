@@ -44,6 +44,16 @@ RUN pnpm --filter @repo/backend prisma:generate
 RUN pnpm --filter "@repo/backend..." build
 
 RUN pnpm --filter @repo/backend deploy --legacy /deploy
+# `pnpm deploy --legacy` links workspace packages as symlinks back into the
+# monorepo checkout (../../../workspace/packages/*), which the runner stage
+# does not carry — the server then dies at boot with MODULE_NOT_FOUND on
+# @repo/logging. Dereference them (and their dep links, -L) into real
+# directories so /deploy is self-contained.
+RUN set -eu; for link in /deploy/node_modules/@repo/*; do \
+      target="$(readlink -f "$link")"; \
+      rm "$link"; \
+      cp -rL "$target" "$link"; \
+    done
 # Copy the generated Prisma client (written to the pnpm virtual store during generate)
 # into the deploy directory so the runner doesn't need to re-run prisma generate.
 RUN mkdir -p /deploy/node_modules/.prisma && \
