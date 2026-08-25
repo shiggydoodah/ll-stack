@@ -37,7 +37,8 @@ build` reads env at import time, **and** it means CI fails if an example drifts
 - A GitHub service container cannot mount `scripts/postgres-init`, so
   `llstack_test` is created with an explicit `psql` step in both jobs.
 - Node version comes from `.nvmrc`; pnpm from `packageManager` via
-  `pnpm/action-setup`.
+  `pnpm/action-setup`, which must stay at **v6 or newer** — v6 is the release
+  that added pnpm 11 support and the repo pins pnpm 11.
 - Keep `AGENTS.md`, `CLAUDE.md`, and `copilot-instructions.md` in sync when
   changing agent rules.
 
