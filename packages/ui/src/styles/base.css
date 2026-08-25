@@ -187,8 +187,8 @@
 /*
  * Display-text chrome: buttons, badges, tab triggers, table headers, field
  * labels. Components opt in with the .ui-display-text class; a theme's
- * config decides whether the library shouts (8bit uppercase + tracking) or
- * speaks sentence case (riso).
+ * config decides whether the library shouts (uppercase + tracking) or
+ * speaks sentence case.
  */
 .ui-display-text {
   text-transform: var(--ui-display-case, none);

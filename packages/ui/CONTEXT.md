@@ -39,7 +39,7 @@ packages/ui/
     ui/icons/         lucide re-export barrel
     ui/hooks/         useCountdown, useDebouncedAsync, useFileUpload, useMediaQuery
     ui/providers/     notification-provider
-  themes/             default/, eightbit/ — theme.json + generated tokens.gen.css + index.css
+  themes/             default/ — theme.json + generated tokens.gen.css + index.css
   scripts/            generate-themes.ts, verify-css-exports.mjs, verify-component-catalog.mjs
   COMPONENTS.md       the agent-facing component catalog
 ```
@@ -99,7 +99,7 @@ contracts.
   colour scheme.
 - Every other tone uses the `tone-*` utilities generated from the `--ui-tone-*`
   slots (`bg-tone-red`, `text-tone-red`). Tone _names_ are fixed API; themes
-  remap the hue (eightbit maps `blue` → cyan).
+  remap the hue (a theme may map `blue` → cyan).
 - Solid fills always use `text-tone-<tone>-contrast`, never a literal
   white/black.
 - `/20` and `/10` opacity modifiers back the surface and soft variants; they

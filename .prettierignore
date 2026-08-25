@@ -9,3 +9,4 @@ test-results/
 pnpm-lock.yaml
 packages/services/src/**/generated/
 **/*.gen.ts
+**/*.gen.css

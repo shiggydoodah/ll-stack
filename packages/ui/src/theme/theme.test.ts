@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import defaultTheme from '../../themes/default/theme.json';
-import eightbitTheme from '../../themes/eightbit/theme.json';
 import { themeConfigSchema } from './config';
 import { generateThemeCss } from './generate';
 
@@ -41,13 +40,44 @@ const minimalTheme = {
   shadows: { sm: 'none', md: 'none', lg: 'none' },
 };
 
+/**
+ * Everything `minimalTheme` leaves out: self-hosted font files and a per-mode
+ * shadow override. Kept inline so the generator tests don't depend on which
+ * themes happen to ship in `themes/`.
+ */
+const fontTheme = {
+  ...structuredClone(minimalTheme),
+  name: 'fontly',
+  fonts: {
+    body: {
+      family: 'Example Body',
+      fallbacks: ['monospace'],
+      files: [{ path: 'fonts/ExampleBody-Regular.woff2', weight: '400' }],
+    },
+    display: {
+      family: 'Example Display',
+      fallbacks: ['monospace'],
+      files: [{ path: 'fonts/ExampleDisplay-Regular.woff2', weight: '400' }],
+    },
+    mono: { alias: 'body' },
+  },
+  shadows: { sm: '3px 3px 0 0 {ink}', md: '4px 4px 0 0 {ink}', lg: '6px 6px 0 0 {ink}' },
+  modes: {
+    light: structuredClone(minimalTheme.modes.light),
+    dark: {
+      ...structuredClone(minimalTheme.modes.dark),
+      shadows: { sm: '3px 3px 0 0 black', md: '4px 4px 0 0 black', lg: '6px 6px 0 0 black' },
+    },
+  },
+};
+
 describe('themeConfigSchema', () => {
   it('accepts the shipped default theme', () => {
     expect(themeConfigSchema.safeParse(defaultTheme).success).toBe(true);
   });
 
-  it('accepts the shipped eightbit theme', () => {
-    expect(themeConfigSchema.safeParse(eightbitTheme).success).toBe(true);
+  it('accepts a fully-specified theme (font files, per-mode shadows)', () => {
+    expect(themeConfigSchema.safeParse(fontTheme).success).toBe(true);
   });
 
   it('accepts a minimal theme and fills defaults', () => {
@@ -127,26 +157,23 @@ describe('generateThemeCss', () => {
 
   it('emits @font-face only for themes with font files', () => {
     expect(tokensCss).not.toContain('@font-face');
-    const eightbit = generateThemeCss(themeConfigSchema.parse(eightbitTheme), {
-      hasCustomCss: true,
-    });
-    expect(eightbit.tokensCss).toContain(
-      "src: url('./fonts/PressStart2P-Regular.woff2') format('woff2');",
+    const withFonts = generateThemeCss(themeConfigSchema.parse(fontTheme));
+    expect(withFonts.tokensCss).toContain(
+      "src: url('./fonts/ExampleDisplay-Regular.woff2') format('woff2');",
     );
   });
 
   it('embeds font files as data URIs when their contents are provided', () => {
-    const eightbit = generateThemeCss(themeConfigSchema.parse(eightbitTheme), {
-      hasCustomCss: true,
+    const withFonts = generateThemeCss(themeConfigSchema.parse(fontTheme), {
       fontFiles: {
-        'fonts/PressStart2P-Regular.woff2': 'UFJFU1M=',
-        'fonts/VT323-Regular.woff2': 'VlQzMjM=',
+        'fonts/ExampleBody-Regular.woff2': 'Qk9EWQ==',
+        'fonts/ExampleDisplay-Regular.woff2': 'RElTUExBWQ==',
       },
     });
-    expect(eightbit.tokensCss).toContain(
-      "src: url(data:font/woff2;base64,UFJFU1M=) format('woff2');",
+    expect(withFonts.tokensCss).toContain(
+      "src: url(data:font/woff2;base64,RElTUExBWQ==) format('woff2');",
     );
-    expect(eightbit.tokensCss).not.toContain("url('./fonts/");
+    expect(withFonts.tokensCss).not.toContain("url('./fonts/");
   });
 
   it('chains custom.css after tokens in index.css only when present', () => {
@@ -159,11 +186,11 @@ describe('generateThemeCss', () => {
   });
 
   it('honours per-mode shadow overrides', () => {
-    const eightbit = generateThemeCss(themeConfigSchema.parse(eightbitTheme), {
-      hasCustomCss: true,
-    });
-    expect(eightbit.tokensCss).toContain('--ui-shadow-md: 4px 4px 0 0 #16112b;');
-    const darkBlock = eightbit.tokensCss.slice(eightbit.tokensCss.indexOf("[data-mode='dark']"));
+    const withShadows = generateThemeCss(themeConfigSchema.parse(fontTheme));
+    expect(withShadows.tokensCss).toContain('--ui-shadow-md: 4px 4px 0 0 #111111;');
+    const darkBlock = withShadows.tokensCss.slice(
+      withShadows.tokensCss.indexOf("[data-mode='dark']"),
+    );
     expect(darkBlock).toContain('--ui-shadow-md: 4px 4px 0 0 black;');
   });
 });

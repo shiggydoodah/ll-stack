@@ -68,7 +68,7 @@ const modeSchema = z.object({
   focusRing: colorValue.optional(),
   focusRingBackground: colorValue.optional(),
   skeleton: z.object({ start: colorValue, mid: colorValue, end: colorValue }).optional(),
-  /** Per-mode shadow override (e.g. 8bit's dark mode uses pure-black offsets). */
+  /** Per-mode shadow override (e.g. a dark mode that wants pure-black offsets). */
   shadows: z.object({ sm: z.string(), md: z.string(), lg: z.string() }).optional(),
 });
 

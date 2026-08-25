@@ -52,8 +52,8 @@
      * The chromatic half of the tone prop API (`neutral` rides
      * --ui-foreground/--ui-background directly). Tone NAMES are fixed —
      * they are component props across the library — but themes reinterpret
-     * the hue (e.g. 8bit maps blue → cyan). `-contrast` is the on-color for
-     * solid fills.
+     * the hue (a theme is free to map blue → cyan). `-contrast` is the
+     * on-color for solid fills.
      */
     --ui-tone-red: #dc2626;
     --ui-tone-red-contrast: #fafaf9;

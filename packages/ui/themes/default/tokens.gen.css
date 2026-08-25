@@ -87,11 +87,7 @@
   --ui-text-invalid: color-mix(in oklab, #dc2626 78%, #fafaf9);
   --ui-input-background: color-mix(in oklab, color-mix(in oklab, #111113 97%, black) 96%, #fafaf9);
   --ui-input-background-focus: color-mix(in oklab, #111113 97%, black);
-  --ui-input-background-invalid: color-mix(
-    in oklab,
-    color-mix(in oklab, #111113 97%, black) 92%,
-    color-mix(in oklab, #dc2626 78%, #fafaf9)
-  );
+  --ui-input-background-invalid: color-mix(in oklab, color-mix(in oklab, #111113 97%, black) 92%, color-mix(in oklab, #dc2626 78%, #fafaf9));
   --ui-focus-ring: #818cf8;
   --ui-focus-ring-background: color-mix(in oklab, #111113 97%, black);
   --ui-skeleton-bg-start: color-mix(in oklab, color-mix(in oklab, #111113 97%, black) 92%, #fafaf9);

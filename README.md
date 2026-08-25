@@ -104,7 +104,7 @@ The layering is strict and worth copying:
 
 A standalone component library ported in from a published package: around thirty primitives (button, input, select, table, typography, layout) and twenty composed components (dialog, drawer, toast, file upload, password strength meter, avatar crop), built on Radix where Radix earns its place, plus TanStack Form and Table wrappers.
 
-Styling is Tailwind v4 driven entirely by a `--ui-*` CSS variable token contract. Themes are generated from a `theme.json` by a script, so a new theme is a config file rather than a stylesheet rewrite. Two ship: `default` and `eightbit`.
+Styling is Tailwind v4 driven entirely by a `--ui-*` CSS variable token contract. Themes are generated from a `theme.json` by a script, so a new theme is a config file rather than a stylesheet rewrite.
 
 `COMPONENTS.md` is the catalog — it exists so an agent picks an existing component instead of writing a fourth button.
 

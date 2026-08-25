@@ -48,7 +48,7 @@ import { Button, Card, Input } from '@repo/ui';
 | `…/specimens`           | Dev-only component preview registry (for ui-lab / theme tools) |
 | `…/theme`               | Theme config zod schema + pure CSS generator                   |
 | `…/styles.css`          | The shared stylesheet entrypoint                               |
-| `…/themes/<name>`       | One theme's CSS (`default`, `eightbit`, …)                     |
+| `…/themes/<name>`       | One theme's CSS (`default`, …)                                 |
 
 Server components must import from the sub-paths, never the top-level barrel
 (it re-exports client hooks and TanStack Form).
@@ -58,7 +58,7 @@ Server components must import from the sub-paths, never the top-level barrel
 A theme lives in `themes/<name>/`:
 
 ```
-themes/eightbit/
+themes/<name>/
   theme.json      # hand-written config (the future theme-builder exports this)
   custom.css      # optional structural CSS the tokens can't express
   fonts/*.woff2   # optional self-hosted fonts (embedded as data URIs at build)
@@ -74,8 +74,7 @@ easing), and display case/tracking. Both `light` and `dark` modes are required,
 but only `background`, `foreground`, `accent` and the six tone hues are
 mandatory — everything else (borders, text tiers, input fills, skeleton, tone
 contrast colours) derives automatically, so a hand-written theme stays ~40
-lines. See `themes/default/theme.json` for a minimal example and
-`themes/eightbit/theme.json` for a maximal one.
+lines. See `themes/default/theme.json` for a worked example.
 
 ```bash
 pnpm themes:build          # validate + regenerate all themes
@@ -92,11 +91,11 @@ pnpm themes:build --check  # CI staleness check (part of `pnpm verify`)
 3. **Generated theme CSS** scopes token values under `[data-theme='<name>']`
    with `[data-mode]` blocks for light/dark. No `:root` rules — a theme applies
    only where you put its attribute:
-   - whole app: `<html data-theme="eightbit" data-mode="dark">`
-   - theme island: `<section data-theme="eightbit">` inherits the page's mode
+   - whole app: `<html data-theme="default" data-mode="dark">`
+   - theme island: `<section data-theme="<other>">` inherits the page's mode
    - mode island: `<div data-mode="light">` inside a themed subtree
 4. **`custom.css`** chains after the tokens for structural styling — e.g.
-   eightbit's press-into-shadow buttons — by targeting the stable class hooks
+   press-into-shadow buttons — by targeting the stable class hooks
    (`.ui-btn`, `.ui-field`, `.ui-card`, `.ui-dialog`, `.ui-badge`,
    `.ui-display-text`, …). Components never change per theme.
 
@@ -104,8 +103,8 @@ pnpm themes:build --check  # CI staleness check (part of `pnpm verify`)
 
 The animated conic focus ring is the library default and is fully
 token-coloured (`--ui-focus-ring`, `--ui-focus-ring-background`) — most themes
-just recolor it. A theme wanting a different mechanism overrides it in
-`custom.css` (see `themes/eightbit/custom.css` for the hard-outline recipe).
+just recolor it. A theme wanting a different mechanism overrides it in its
+`custom.css`.
 
 ## Icons
 
