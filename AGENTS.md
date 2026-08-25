@@ -63,7 +63,6 @@ After each meaningful implementation step, briefly report:
 - what changed and why
 - validation run and result
 - any risks or follow-up work needed
-- a suggested git commit message
 
 ---
 
