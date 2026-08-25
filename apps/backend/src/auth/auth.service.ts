@@ -268,18 +268,35 @@ export class AuthService implements OnApplicationBootstrap {
     }
   }
 
-  /** Resolves active session metadata from a raw bearer token. */
+  /**
+   * Resolves active session metadata from a raw bearer token.
+   *
+   * EVERY LIVENESS CONDITION IS IN THE WHERE CLAUSE, INCLUDING THE OWNER'S.
+   * This used to `findUnique` on the token hash and then filter `revokedAt`
+   * and `expiresAt` in JS — which had no way to express the fourth condition,
+   * `user.deletedAt IS NULL`, because `findUnique` takes no relation filters.
+   * So it never checked it: `login` refused a soft-deleted account, but any
+   * session already issued to that account kept working until its 7-day TTL ran
+   * out. Deleting a user did not sign them out, and the schema comment saying
+   * an account's password hash is replaced with an unusable sentinel implied it
+   * did.
+   *
+   * `findFirst` is what makes all four expressible together. It still resolves
+   * through the unique index on `token_hash`, and the resulting query returns a
+   * row only when the session is genuinely usable.
+   */
   async getSession(token: SessionToken): Promise<Session | null> {
-    const session = await this.prisma.session.findUnique({
-      where: { tokenHash: hashToken(token) },
+    const session = await this.prisma.session.findFirst({
+      where: {
+        tokenHash: hashToken(token),
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+        user: { deletedAt: null },
+      },
       select: SESSION_SELECT,
     });
 
-    if (
-      session === null ||
-      session.revokedAt !== null ||
-      session.expiresAt.getTime() <= Date.now()
-    ) {
+    if (session === null) {
       return null;
     }
 

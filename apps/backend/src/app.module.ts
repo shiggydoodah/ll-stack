@@ -75,13 +75,24 @@ import { UsersModule } from './users/users.module';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
-    {
-      provide: APP_GUARD,
-      useClass: ApiSecretGuard,
-    },
+    // ORDER IS THE SECURITY CONTROL, NOT A STYLE CHOICE. Nest runs global
+    // guards in the order they are provided here, so whichever one comes first
+    // decides what an unauthenticated request costs an attacker. With
+    // `ApiSecretGuard` first, a wrong `x-api-secret` was answered 401 before
+    // the throttler ever counted the request — the header guarding every
+    // internal route was guessable at line rate, from one IP, forever.
+    //
+    // The throttler goes first so every request — including the ones that are
+    // about to be rejected — lands in the global 60 req/min per-IP bucket.
+    // Legitimate callers are unaffected: they were already inside that bucket,
+    // since the throttler ran on them either way.
     {
       provide: APP_GUARD,
       useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ApiSecretGuard,
     },
   ],
 })

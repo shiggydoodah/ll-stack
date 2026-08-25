@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
 
+import { maskEmail } from '../common/utils/mask-email';
 import { PrismaService } from '../prisma/prisma.service';
 import type { DashboardMember, DashboardSummary } from './dashboard.types';
 
@@ -19,11 +20,17 @@ const MEMBER_SELECT = {
 
 type MemberRow = Prisma.UserGetPayload<{ select: typeof MEMBER_SELECT }>;
 
+// `email` is selected but never returned as stored. This read is authorized by
+// nothing more than a valid session, and any visitor can mint one by signing
+// up, so returning the address published every member's email to anyone who
+// asked. Masking happens HERE rather than in the DTO mapper so the full value
+// stops at this module's boundary and no later caller of `getSummary` can
+// forward it by accident.
 function toDashboardMember(row: MemberRow): DashboardMember {
   return {
     userId: row.userId,
     name: row.name,
-    email: row.email,
+    emailMasked: maskEmail(row.email),
     role: row.role,
     joinedAt: row.createdAt,
   };

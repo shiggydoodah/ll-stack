@@ -1,9 +1,12 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { getStorageToken } from '@nestjs/throttler';
 import request from 'supertest';
 
+import type { BoundedThrottlerStorage } from '../src/common/throttling/bounded-throttler.storage';
 import { TRACE_ID_HEADER } from '../src/common/utils/trace-context';
 import { applyAppModuleTestEnv } from './helpers/app-module-test-env';
+import { pinRateLimitingEnabled } from './helpers/rate-limiting';
 
 const API_SECRET_HEADER = 'x-api-secret';
 const TEST_API_SECRET = 'test-api-secret';
@@ -17,12 +20,14 @@ const TEST_API_SECRET = 'test-api-secret';
  */
 describe('AppModule (e2e)', () => {
   let app: INestApplication;
+  let throttlerStorage: BoundedThrottlerStorage;
   const previousEnv = { ...process.env };
 
   beforeAll(async () => {
     // Env BEFORE the import: `ConfigModule.forRoot` validates eagerly while the
     // decorator metadata is evaluated, i.e. at module load, not at app init.
     applyAppModuleTestEnv(3199);
+    pinRateLimitingEnabled();
     const { AppModule } = await import('../src/app.module.js');
     const { configureApp } = await import('../src/bootstrap/configure-app.js');
 
@@ -33,6 +38,8 @@ describe('AppModule (e2e)', () => {
     app = moduleRef.createNestApplication({ logger: false });
     configureApp(app, { openapi: true });
     await app.init();
+
+    throttlerStorage = app.get<BoundedThrottlerStorage>(getStorageToken());
   });
 
   afterAll(async () => {
@@ -76,5 +83,33 @@ describe('AppModule (e2e)', () => {
     expect(response.body.paths['/health'].get.operationId).toBe('getHealth');
     // /health is published as unauthenticated; the doc must say so.
     expect(response.body.paths['/health'].get.security).toEqual([]);
+  });
+
+  // Runs last: it deliberately exhausts the global per-IP bucket, and every
+  // request in this file comes from the same loopback address.
+  it('counts a wrong api secret against the global throttle before rejecting it', async () => {
+    // GUARD ORDER, ASSERTED THROUGH BEHAVIOUR. `app.module.ts` provides
+    // AppThrottlerGuard before ApiSecretGuard, and Nest runs global guards in
+    // provider order. With the two the other way round — which is how they were
+    // registered — a wrong `x-api-secret` was answered 401 without the request
+    // ever being counted, so the single header protecting every internal route
+    // could be guessed at line rate, forever, from one IP.
+    throttlerStorage.storage.clear();
+
+    const globalLimit = 60;
+    for (let attempt = 0; attempt < globalLimit; attempt += 1) {
+      await request(app.getHttpServer())
+        .get('/users/me')
+        .set(API_SECRET_HEADER, 'wrong-api-secret')
+        .expect(401);
+    }
+
+    const blocked = await request(app.getHttpServer())
+      .get('/users/me')
+      .set(API_SECRET_HEADER, 'wrong-api-secret')
+      .expect(429);
+    expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+
+    throttlerStorage.storage.clear();
   });
 });

@@ -1,6 +1,24 @@
 import { z } from 'zod';
 
-const nodeEnvSchema = z.enum(['development', 'test', 'staging', 'production']);
+const NODE_ENVS = ['development', 'test', 'staging', 'production'] as const;
+
+/**
+ * Required, with no default — mirroring `apps/backend/src/config/env.schema.ts`.
+ * The `superRefine` below (and `lib/logging/log-emitter.ts`, and
+ * `lib/auth/constants.ts`'s `__Host-` cookie prefix) all branch on this value,
+ * so a default of `'development'` meant an omitted variable quietly selected
+ * the least guarded behaviour. Next sets NODE_ENV itself for `next dev`,
+ * `next build`, and `next start`, and `apps/frontend/Dockerfile` pins
+ * `production`, so nothing that runs this app relies on a default.
+ */
+const nodeEnvSchema = z.enum(NODE_ENVS, {
+  error: (issue) =>
+    issue.input === undefined
+      ? `NODE_ENV must be set explicitly to one of: ${NODE_ENVS.join(' | ')}. ` +
+        'There is deliberately no default — an omitted value must not silently ' +
+        'mean "development".'
+      : undefined,
+});
 
 const logLevelSchema = z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']);
 
@@ -29,7 +47,7 @@ const LOCAL_DEV_SECRET_DEFAULTS = {
 } as const;
 
 const serverEnvBaseSchema = z.object({
-  NODE_ENV: nodeEnvSchema.default('development'),
+  NODE_ENV: nodeEnvSchema,
   PORT: z.coerce.number().int().positive().default(4100),
   BACKEND_INTERNAL_URL: z.string().url(),
   BACKEND_API_SECRET: z.string().min(1),

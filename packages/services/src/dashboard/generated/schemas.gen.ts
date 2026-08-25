@@ -61,9 +61,10 @@ export const DashboardMemberDtoSchema = {
             type: 'string',
             example: 'Ada Whitcombe'
         },
-        email: {
+        emailMasked: {
             type: 'string',
-            example: 'member@example.com'
+            example: 'm***@example.com',
+            description: 'Member email, masked. This list is readable by any signed-in member, so the stored address is never published here — only the first character and the domain survive.'
         },
         role: {
             example: 'MEMBER',
@@ -81,7 +82,7 @@ export const DashboardMemberDtoSchema = {
     required: [
         'userId',
         'name',
-        'email',
+        'emailMasked',
         'role',
         'joinedAt'
     ]

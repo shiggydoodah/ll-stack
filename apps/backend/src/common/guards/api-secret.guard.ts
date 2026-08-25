@@ -1,23 +1,23 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { type Request } from 'express';
 import { type Env } from '../../config/env.schema';
 import { SKIP_API_SECRET_KEY } from '../constants/security.constants';
+import { secretsMatch } from '../utils/secret-compare';
 
 /**
- * Constant-time secret comparison. Both inputs are hashed to a fixed 32-byte
- * digest first so `timingSafeEqual` never sees mismatched lengths (it throws on
- * those) and the comparison leaks neither the secret's length nor how many
- * leading characters matched.
+ * The BFF-to-backend trust boundary: every request must carry `x-api-secret`
+ * unless the route is deliberately public (`@SkipApiSecret()`).
+ *
+ * IT IS REGISTERED AFTER `AppThrottlerGuard` IN `app.module.ts`, DELIBERATELY.
+ * Global guards run in provider order, so a guard placed before the throttler
+ * answers 401 without the request ever being counted — which leaves the one
+ * header standing between the internet and every internal route guessable at
+ * whatever rate the network allows. Ordering the throttler first puts the
+ * global 60 req/min per-IP bucket in front of the guess, at no cost to
+ * legitimate traffic (which was already inside that bucket).
  */
-const secretsMatch = (provided: string, expected: string): boolean => {
-  const providedHash = createHash('sha256').update(provided).digest();
-  const expectedHash = createHash('sha256').update(expected).digest();
-  return timingSafeEqual(providedHash, expectedHash);
-};
-
 @Injectable()
 export class ApiSecretGuard implements CanActivate {
   constructor(

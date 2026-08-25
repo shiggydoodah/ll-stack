@@ -7,7 +7,7 @@ A production-minded full-stack TypeScript boilerplate: a pnpm-workspace monorepo
 ## What's in the box
 
 - **Monorepo** — pnpm workspaces + Turborepo task graph, shared TypeScript config presets, one `pnpm verify` ladder for everything.
-- **Backend** — NestJS 11 on Express, Prisma + PostgreSQL, class-validator DTOs, zod-validated env config, `@nestjs/throttler` rate limiting, Swagger/OpenAPI served at `/docs`.
+- **Backend** — NestJS 11 on Express, Prisma + PostgreSQL, class-validator DTOs, zod-validated env config, `@nestjs/throttler` rate limiting, Swagger/OpenAPI served at `/docs` in development (off elsewhere unless `OPENAPI_DOCS_ENABLED=true`, which puts it behind `ADMIN_API_KEY`).
 - **Typed clients, generated** — the backend OpenAPI document is extracted and code-generated (via `@hey-api/openapi-ts`) into `packages/services`, so the frontends consume a typed contract instead of hand-rolled fetch calls. A drift check fails the build when the contract and the committed client disagree.
 - **Frontend** — Next.js (App Router) member-facing app, composed from the shared `@repo/ui` component library (Tailwind v4, token-driven theming, Radix-backed primitives).
 - **Observability** — structured logging with `nestjs-pino`, shared redaction helpers in `@repo/logging`, OpenTelemetry traces and metrics, and a Seq log sink running in Docker for local log search.

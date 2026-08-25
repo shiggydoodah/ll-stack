@@ -18,6 +18,7 @@ password reset — those grow here later).
 | `session-request.types.ts`         | `AuthenticatedRequest` shape guards stamp                                                                |
 | `auth-register-throttler.guard.ts` | 5/hr per IP + 3/hr per email-hash buckets                                                                |
 | `auth-login-throttler.guard.ts`    | 10/min per IP + 5/15min per email-hash buckets                                                           |
+| `session-prune.service.ts`         | Interval-registered sweep deleting expired sessions (`SchedulerRegistry`, batched, env-gated)            |
 | `dto/`                             | Request DTOs + `AccountDto`/`toAccountDto`                                                               |
 
 ## Contracts
@@ -32,10 +33,17 @@ password reset — those grow here later).
   cannot share a constant; keep them in lockstep.
 - Exported surface for other modules: `AuthService`, `SessionCookieService`,
   `SessionGuard` (import `AuthModule`, never this module's internals).
+- `getSession` resolves a token only when the session is unrevoked, unexpired,
+  AND its owner is not soft-deleted — all four in the WHERE clause. Soft-deleting
+  a user signs them out immediately; it is not left to the session TTL.
+- `sessions` rows are hard-deleted once expired (`SessionPruneService`, hourly by
+  default). Revoked-but-unexpired rows are left in place deliberately: the row is
+  the record of the revocation, and it becomes prunable within the TTL anyway.
 - Route/guard classification is pinned by `test/route-inventory.spec.ts`.
 
 ## Tests
 
 `test/auth.service.spec.ts` (service contract), `test/auth.integration.spec.ts`
-(HTTP statuses, cookies, throttles). Argon2 cost is dialed to spec minimums by
-`test/helpers/app-module-test-env.ts`.
+(HTTP statuses, cookies, throttles), `test/session-prune.integration.spec.ts`
+(sweep behaviour and timer registration). Argon2 cost is dialed to spec minimums
+by `test/helpers/app-module-test-env.ts`.

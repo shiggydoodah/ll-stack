@@ -1,6 +1,34 @@
 import { z } from 'zod';
 
-const nodeEnvSchema = z.enum(['development', 'test', 'staging', 'production']);
+const NODE_ENVS = ['development', 'test', 'staging', 'production'] as const;
+
+/**
+ * NODE_ENV IS REQUIRED, WITH NO DEFAULT, AND THAT IS THE WHOLE POINT.
+ *
+ * Every fail-closed rule in this file — the committed-dev-credential refusal,
+ * the secret-length floor, the argon2 cost floors, the single-instance
+ * throttler rule, `RATE_LIMITING_ENABLED`, the `FRONTEND_ORIGIN` requirement —
+ * is written as `if (NODE_ENV === 'staging' || NODE_ENV === 'production')`.
+ * While this defaulted to `'development'`, OMITTING the variable disarmed all
+ * of them at once, and the resulting process gave no sign of it: it booted, it
+ * served traffic, and it accepted the API secret that is published in this
+ * repository. A deployment is far likelier to forget a variable than to set it
+ * to the wrong value, so the omission has to be the loud case — and the only
+ * way to make it loud is to refuse to boot without it.
+ *
+ * The cost is one line per environment, and every environment this repo ships
+ * already pays it: both Dockerfiles (`ENV NODE_ENV=production`), both
+ * `.env.example` files, `apps/testing/.env.test.example`,
+ * `test/helpers/app-module-test-env.ts`, and `scripts/extract-openapi.ts`.
+ */
+const nodeEnvSchema = z.enum(NODE_ENVS, {
+  error: (issue) =>
+    issue.input === undefined
+      ? `NODE_ENV must be set explicitly to one of: ${NODE_ENVS.join(' | ')}. ` +
+        'It is the switch every fail-closed check in this schema reads, so there is ' +
+        'deliberately no default — an omitted value must not silently mean "development".'
+      : undefined,
+});
 type NodeEnv = z.infer<typeof nodeEnvSchema>;
 
 const developmentDefaults = {
@@ -17,6 +45,15 @@ const LOCAL_DEV_SECRET_DEFAULTS = {
   BACKEND_API_SECRET: 'dev-backend-api-secret',
   ADMIN_API_KEY: 'dev-admin-api-key',
 } as const;
+
+// Length floor for those same shared secrets once deployed. The field-level
+// `min(1)` is what lets a fresh clone boot on a readable placeholder; it is not
+// a credential policy, and on its own it accepted a ONE-CHARACTER
+// BACKEND_API_SECRET in production — a keyspace an attacker exhausts by hand,
+// behind a header that is the entire trust boundary between the internet and
+// every internal route. 32 characters is what `openssl rand -base64 24` emits,
+// which is what the `.env.example` files tell operators to generate.
+const MIN_DEPLOYED_SECRET_LENGTH = 32;
 
 // Trace sampling defaults by environment. Zod `.default()` can't read NODE_ENV,
 // so an omitted OTEL_TRACES_SAMPLE_RATE is resolved in the `.transform()` below:
@@ -56,17 +93,46 @@ const slowQueryThresholdSchema = z.coerce.number().int().positive().default(500)
 
 export const envSchema = z
   .object({
-    NODE_ENV: nodeEnvSchema.default('development'),
+    NODE_ENV: nodeEnvSchema,
     PORT: z.coerce.number().int().positive().default(3100),
 
     DATABASE_URL: databaseUrlSchema,
 
+    // `min(1)` so a fresh clone boots; the real floor for a deployed
+    // environment is MIN_DEPLOYED_SECRET_LENGTH, enforced in the superRefine
+    // below alongside the committed-dev-default refusal.
     BACKEND_API_SECRET: z.string().min(1),
     ADMIN_API_KEY: z.string().min(1),
 
     // Session lifetime — drives both the `sessions.expires_at` column and the
     // session cookie's maxAge (7 days).
     AUTH_SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
+
+    // Session pruning — see `auth/session-prune.service.ts`. `sessions` is
+    // Archetype B (mutable, hard-delete only): a row is deleted outright once
+    // it is dead, never soft-deleted. Nothing implemented that, so the table
+    // grew by a row per login forever and retained the token hash of every
+    // expired, revoked, and deleted-owner session indefinitely.
+    //
+    // `AUTH_SESSION_PRUNE_ENABLED` resolves in the transform below to on
+    // everywhere except test, where a background timer would race the suites'
+    // own `session.deleteMany()` cleanup; the session-prune spec turns it back
+    // on explicitly. The batch size bounds a single delete statement, not the
+    // sweep — a sweep keeps taking batches until the table is clean or it hits
+    // its per-run batch ceiling.
+    AUTH_SESSION_PRUNE_ENABLED: booleanFromEnvString.optional(),
+    AUTH_SESSION_PRUNE_INTERVAL_MS: z.coerce.number().int().positive().default(3_600_000),
+    AUTH_SESSION_PRUNE_BATCH_SIZE: z.coerce.number().int().positive().max(10_000).default(500),
+
+    // Mount the Swagger UI and the OpenAPI JSON at `/docs` and `/docs-json`.
+    // Resolved in the transform below to development-only. The document
+    // describes every route, DTO, error shape, and security scheme in the
+    // service, and `SwaggerModule.setup` mounts it directly on the Express
+    // instance — outside `ApiSecretGuard`, outside the throttler, outside the
+    // request pipeline every other route goes through. Enabling it in a
+    // deployed environment is allowed and is not free: the mount is then gated
+    // on `ADMIN_API_KEY` (see `src/bootstrap/openapi-docs.ts`).
+    OPENAPI_DOCS_ENABLED: booleanFromEnvString.optional(),
 
     // Argon2id password-hashing cost (auth.service.ts). The defaults pin the
     // argon2 library's own production-strength parameters (64 MiB, t=3, p=4)
@@ -328,18 +394,38 @@ export const envSchema = z
     // `pnpm setup` .env is refused here rather than coming up on a credential
     // anyone can read in the repository.
     //
-    // Note the limit of that: this keys off NODE_ENV, and docker-compose.yml
-    // pins NODE_ENV: development, so a stack copied from there carries the
-    // variable that disables this check. The compose comments say so.
+    // A deployed environment must also pick a secret long enough to be worth
+    // comparing. Refusing the two published defaults says nothing about what
+    // replaces them, and the field-level `min(1)` was happy with anything:
+    // `BACKEND_API_SECRET=x` booted in production and left `ApiSecretGuard`
+    // defending every internal route with a 62-value keyspace.
+    //
+    // This check reads NODE_ENV, which is now a required variable with no
+    // default (see `nodeEnvSchema`) — an omitted one used to skip this and
+    // every other rule below in silence.
     if (env.NODE_ENV === 'staging' || env.NODE_ENV === 'production') {
-      for (const [key, devValue] of Object.entries(LOCAL_DEV_SECRET_DEFAULTS)) {
-        if (env[key as keyof typeof LOCAL_DEV_SECRET_DEFAULTS] === devValue) {
+      for (const [key, devValue] of Object.entries(LOCAL_DEV_SECRET_DEFAULTS) as [
+        keyof typeof LOCAL_DEV_SECRET_DEFAULTS,
+        string,
+      ][]) {
+        if (env[key] === devValue) {
           ctx.addIssue({
             code: 'custom',
             path: [key],
             message:
               `${key} is still the committed local dev default, which is public in the ` +
               'repository. Set a real secret before deploying.',
+          });
+          continue;
+        }
+
+        if (env[key].length < MIN_DEPLOYED_SECRET_LENGTH) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message:
+              `${key} must be at least ${MIN_DEPLOYED_SECRET_LENGTH} characters in staging or ` +
+              'production. Generate one with `openssl rand -base64 24`.',
           });
         }
       }
@@ -353,6 +439,13 @@ export const envSchema = z
       // Dev/test default mirrors the frontend dev server; deployed environments
       // were required to set it explicitly in the superRefine above.
       FRONTEND_ORIGIN: env.FRONTEND_ORIGIN ?? developmentDefaults.FRONTEND_PUBLIC_URL,
+      // Development only unless an operator says otherwise, and gated on the
+      // admin key when they do — see the field comment above and
+      // `src/bootstrap/openapi-docs.ts`.
+      OPENAPI_DOCS_ENABLED: env.OPENAPI_DOCS_ENABLED ?? env.NODE_ENV === 'development',
+      // On everywhere but test: a background sweep firing mid-spec would race
+      // the integration suites' own session cleanup.
+      AUTH_SESSION_PRUNE_ENABLED: env.AUTH_SESSION_PRUNE_ENABLED ?? env.NODE_ENV !== 'test',
       OTEL_TRACES_SAMPLE_RATE:
         env.OTEL_TRACES_SAMPLE_RATE ?? resolveDefaultTracesSampleRate(env.NODE_ENV),
       OTEL_SERVICE_NAME: env.OTEL_SERVICE_NAME ?? env.APPLICATION_NAME,
@@ -374,9 +467,13 @@ export type Env = z.infer<typeof envSchema>;
  * The field schemas are SHARED with `envSchema` above, not restated. Adding a
  * variable here means a script genuinely reads it — it is not a place to
  * silence a boot failure.
+ *
+ * That sharing includes NODE_ENV being REQUIRED. A narrower schema is not a
+ * laxer one: a script that decides what it may touch by reading NODE_ENV must
+ * not read `'development'` off an unset variable any more than the server may.
  */
 export const operatorScriptEnvSchema = z.object({
-  NODE_ENV: nodeEnvSchema.default('development'),
+  NODE_ENV: nodeEnvSchema,
   DATABASE_URL: databaseUrlSchema,
   LOG_SLOW_QUERY_THRESHOLD_MS: slowQueryThresholdSchema,
 });

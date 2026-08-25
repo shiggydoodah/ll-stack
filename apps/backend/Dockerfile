@@ -84,12 +84,30 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl \
     && rm -rf /var/lib/apt/lists/*
 
+# Run as a non-root system user, matching apps/frontend/Dockerfile. Without
+# this the API — the process that parses untrusted request bodies and shells
+# out to `prisma migrate deploy` at boot — runs as uid 0, so any code execution
+# inside the container starts as root, and a container escape starts from root
+# on the host. `nodejs`/`nestjs` at 1001 mirrors the frontend image's
+# `nodejs`/`nextjs` rather than reusing the base image's `node` user (uid 1000),
+# so the two images agree on the uid an operator sees in `ps` and on volume
+# ownership.
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs nestjs
+
 COPY --from=builder /deploy ./
 COPY --from=builder /workspace/apps/backend/dist ./dist
 COPY --from=builder /workspace/apps/backend/prisma ./prisma
 COPY apps/backend/entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 
+# After every COPY: the layers above land root-owned, and the entrypoint's
+# migrate step needs to read the schema and execute the Prisma engine binaries
+# it unpacked into node_modules.
+RUN chown -R nestjs:nodejs /app
+
 EXPOSE 3100
+
+USER nestjs
 
 ENTRYPOINT ["./entrypoint.sh"]

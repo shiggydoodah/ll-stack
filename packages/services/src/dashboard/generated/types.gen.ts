@@ -22,7 +22,10 @@ export type ApiErrorResponseDto = {
 export type DashboardMemberDto = {
     userId: string;
     name: string;
-    email: string;
+    /**
+     * Member email, masked. This list is readable by any signed-in member, so the stored address is never published here — only the first character and the domain survive.
+     */
+    emailMasked: string;
     role: UserRole;
     joinedAt: string;
 };

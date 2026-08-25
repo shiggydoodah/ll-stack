@@ -167,6 +167,25 @@ describe('AuthService (contract)', () => {
     await expect(authService.logout(issued.token)).resolves.toBeUndefined();
   });
 
+  it("treats a soft-deleted account's live session as invalid", async () => {
+    // Soft-deleting a user has to sign them out. `login` already refused a
+    // deleted account, but a session issued BEFORE the deletion kept
+    // authenticating every guarded route until its 7-day TTL ran out.
+    const account = await authService.register(REGISTER_INPUT);
+    const issued = await authService.login({
+      email: REGISTER_INPUT.email,
+      password: REGISTER_INPUT.password,
+    });
+    expect(await authService.getSession(issued.token)).not.toBeNull();
+
+    await prisma.user.update({
+      where: { userId: account.userId },
+      data: { deletedAt: new Date() },
+    });
+
+    expect(await authService.getSession(issued.token)).toBeNull();
+  });
+
   it('treats an expired session as invalid', async () => {
     await authService.register(REGISTER_INPUT);
     const issued = await authService.login({

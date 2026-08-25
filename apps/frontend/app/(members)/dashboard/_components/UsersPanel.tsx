@@ -31,8 +31,10 @@ const columns = [
         <Avatar initials={initialsOf(info.getValue())} size="sm" />
         <div className="grid gap-0.5">
           <span className="text-sm font-semibold text-(--ui-foreground)">{info.getValue()}</span>
+          {/* Masked by the backend — GET /dashboard never returns another
+              member's stored address. See apps/backend/src/common/utils/mask-email.ts. */}
           <span className="text-2xs font-mono text-(--ui-text-muted)">
-            {info.row.original.email}
+            {info.row.original.emailMasked}
           </span>
         </div>
       </div>
@@ -84,7 +86,7 @@ const UsersPanel = ({ totalMembers, members }: UsersPanelProps) => {
     const needle = query.trim().toLowerCase();
     if (!needle) return members;
     return members.filter((member) =>
-      `${member.name} ${member.email} ${member.role}`.toLowerCase().includes(needle),
+      `${member.name} ${member.emailMasked} ${member.role}`.toLowerCase().includes(needle),
     );
   }, [members, query]);
 

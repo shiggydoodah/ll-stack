@@ -7,6 +7,14 @@ export const BACKEND_LOG_EVENTS = {
   // closed rather than evicting a blocked caller). Reason only — throttle keys
   // embed an IP or a hashed identifier and are never logged.
   'system.throttle_store.saturated': 'system.throttle_store.saturated',
+  // A request for the Swagger UI or the OpenAPI document was refused by the
+  // admin-key gate (staging/production only — see bootstrap/openapi-docs.ts).
+  // Reason only; the presented credential is never logged.
+  'system.openapi_docs.denied': 'system.openapi_docs.denied',
+  // A session-prune sweep finished. Counts only — session rows carry token
+  // hashes and user ids, and neither belongs in a periodic maintenance log.
+  'system.session_prune.completed': 'system.session_prune.completed',
+  'system.session_prune.failure': 'system.session_prune.failure',
 
   // Auth lifecycle. `userId` may be logged; emails never are — throttler
   // guards log a truncated sha256 `emailHash` / `ipHash` instead, and tokens

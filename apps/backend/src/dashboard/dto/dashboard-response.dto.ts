@@ -10,8 +10,13 @@ export class DashboardMemberDto {
   @ApiProperty({ example: 'Ada Whitcombe' })
   name!: string;
 
-  @ApiProperty({ example: 'member@example.com' })
-  email!: string;
+  @ApiProperty({
+    example: 'm***@example.com',
+    description:
+      'Member email, masked. This list is readable by any signed-in member, so the stored ' +
+      'address is never published here — only the first character and the domain survive.',
+  })
+  emailMasked!: string;
 
   @ApiProperty({ enum: UserRole, enumName: 'UserRole', example: UserRole.MEMBER })
   role!: UserRole;
@@ -35,7 +40,7 @@ export function toDashboardResponseDto(summary: DashboardSummary): DashboardResp
     members: summary.members.map((member) => ({
       userId: member.userId,
       name: member.name,
-      email: member.email,
+      emailMasked: member.emailMasked,
       role: member.role,
       joinedAt: member.joinedAt.toISOString(),
     })),

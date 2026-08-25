@@ -7,6 +7,7 @@ import { type OpenAPIObject } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { SESSION_COOKIE_NAME } from '../auth/session-cookie.service';
 import { type Env } from '../config/env.schema';
+import { mountOpenApiDocs } from './openapi-docs';
 
 const BACKEND_API_SECRET_SECURITY_SCHEME = 'backendApiSecret';
 
@@ -152,24 +153,34 @@ export function parseTrustProxy(raw: string | undefined): boolean | number | str
 }
 
 /**
- * `openapi` builds the Swagger document and mounts `/docs` + `/docs-json`.
+ * `openapi` builds the Swagger document and mounts `/docs`, `/docs-json`, and
+ * `/docs-yaml`.
  *
- * Off under test. Nearly every integration spec that boots the app never
- * requests either route, yet each pays a full reflection pass over every
- * controller and DTO in every feature module to serve them. A spec that starts
- * asserting `/docs*` without opting back in via `{ openapi: true }` fails
- * loudly on a 404, which is the intended failure mode — this cannot cause a
- * false pass, since no other behaviour depends on the document being mounted.
- * Outside the suite, `scripts/extract-openapi.ts` calls
- * {@link buildOpenApiDocument} directly rather than through here, so
- * `pnpm gen:client` and the `check:drift` step in `pnpm verify:backend`
- * exercise the same path.
+ * THE DEFAULT IS `OPENAPI_DOCS_ENABLED`, WHICH RESOLVES TO DEVELOPMENT-ONLY.
+ * It used to be "anything but test", which mounted the full contract of every
+ * route in production — outside `ApiSecretGuard`, outside the throttler, and
+ * on the access log's exclusion list, so nothing recorded who read it. An
+ * operator can still turn it on in a deployed environment; the mount is gated
+ * on `ADMIN_API_KEY` there (`bootstrap/openapi-docs.ts`).
  *
- * The default is resolved from the validated `NODE_ENV` inside the body rather
+ * The `openapi` parameter overrides the env for a caller that knows what it
+ * wants — `test/app.e2e-spec.ts` opts the document back in under NODE_ENV=test,
+ * where every other spec leaves it off. Off is the right default under test for
+ * a reason unrelated to security: nearly every integration spec that boots the
+ * app never requests these routes, yet each would pay a full reflection pass
+ * over every controller and DTO in every feature module to serve them. A spec
+ * that starts asserting `/docs*` without opting in fails loudly on a 404, which
+ * is the intended failure mode — it cannot cause a false pass, since no other
+ * behaviour depends on the document being mounted. Outside the suite,
+ * `scripts/extract-openapi.ts` calls {@link buildOpenApiDocument} directly
+ * rather than through here, so `pnpm gen:client` and the `check:drift` step in
+ * `pnpm verify:backend` exercise the same path with no HTTP route involved.
+ *
+ * Everything here is resolved from the validated `Env` inside the body rather
  * than from `process.env` in the parameter list: this function is past DI (it
  * takes a built `INestApplication`), so the backend runbook's "read config via
- * typed `ConfigService<Env>`" rule applies, and only the schema's enum can say
- * what a legal environment name is.
+ * typed `ConfigService<Env>`" rule applies, and only the schema can say what a
+ * legal environment name is.
  */
 export function configureApp(
   app: INestApplication,
@@ -194,9 +205,11 @@ export function configureApp(
     }),
   );
 
-  if (openapi ?? config.get('NODE_ENV', { infer: true }) !== 'test') {
-    const openApiDocument = buildOpenApiDocument(app);
-    SwaggerModule.setup('docs', app, openApiDocument);
+  if (openapi ?? config.get('OPENAPI_DOCS_ENABLED', { infer: true })) {
+    mountOpenApiDocs(app, buildOpenApiDocument(app), {
+      nodeEnv: config.get('NODE_ENV', { infer: true }),
+      adminApiKey: config.get('ADMIN_API_KEY', { infer: true }),
+    });
   }
 
   return config.get('PORT', { infer: true });

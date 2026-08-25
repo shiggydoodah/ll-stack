@@ -1,7 +1,9 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { getStorageToken } from '@nestjs/throttler';
 import request from 'supertest';
 
+import type { BoundedThrottlerStorage } from '../src/common/throttling/bounded-throttler.storage';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { applyAppModuleTestEnv } from './helpers/app-module-test-env';
 
@@ -20,6 +22,7 @@ const REGISTER_BODY = {
 describe('Users + dashboard endpoints (integration)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let throttlerStorage: BoundedThrottlerStorage;
   const previousEnv = { ...process.env };
 
   beforeAll(async () => {
@@ -34,6 +37,7 @@ describe('Users + dashboard endpoints (integration)', () => {
     await app.init();
 
     prisma = app.get(PrismaServiceClass);
+    throttlerStorage = app.get<BoundedThrottlerStorage>(getStorageToken());
   });
 
   afterAll(async () => {
@@ -42,6 +46,12 @@ describe('Users + dashboard endpoints (integration)', () => {
   });
 
   beforeEach(async () => {
+    // These specs mint accounts through the real /auth/register route as setup,
+    // and that route carries a 5/hr per-IP throttle. Without this, how many
+    // cases a suite may contain depends on a rate limit it is not testing —
+    // adding one made an unrelated case fail with a 429. Same reasoning as
+    // auth.integration.spec.ts.
+    throttlerStorage.storage.clear();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
   });
@@ -114,13 +124,30 @@ describe('Users + dashboard endpoints (integration)', () => {
       expect(response.body.members).toHaveLength(2);
       expect(response.body.members[0]).toMatchObject({
         name: 'Marcus Reid',
-        email: 'marcus@example.com',
+        emailMasked: 'm***@example.com',
         role: 'MEMBER',
       });
       expect(typeof response.body.members[0].joinedAt).toBe('string');
       // The wire DTO never exposes hashes or consent flags.
       expect(response.body.members[0].passwordHash).toBeUndefined();
       expect(response.body.members[0].consent).toBeUndefined();
+    });
+
+    it("never publishes a member's stored email address", async () => {
+      // The caller here is an ordinary self-service signup with no relationship
+      // to the other member — which is the whole population of this endpoint.
+      const cookie = await registerAndGetCookie();
+      await registerAndGetCookie({ name: 'Marcus Reid', email: 'marcus@example.com' });
+
+      const response = await get('/dashboard').set('Cookie', cookie).expect(200);
+
+      const body = JSON.stringify(response.body);
+      expect(body).not.toContain('marcus@example.com');
+      expect(body).not.toContain(REGISTER_BODY.email);
+      for (const member of response.body.members) {
+        expect(member.email).toBeUndefined();
+        expect(member.emailMasked).toMatch(/^.\*\*\*@/);
+      }
     });
 
     it('rejects a missing session cookie with 401', async () => {
