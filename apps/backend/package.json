@@ -45,6 +45,7 @@
     "@repo/logging": "workspace:*",
     "@repo/schema": "workspace:*",
     "@repo/utils": "workspace:*",
+    "argon2": "^0.45.1",
     "class-transformer": "catalog:",
     "class-validator": "catalog:",
     "cookie-parser": "^1.4.7",

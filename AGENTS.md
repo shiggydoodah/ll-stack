@@ -10,7 +10,7 @@ Keep root instructions short. Use this file for non-negotiables, workflow rules,
 
 LL Stack is a full-stack TypeScript boilerplate: a pnpm + Turborepo monorepo with a NestJS backend, a Next.js member-facing frontend, a Playwright E2E workspace, and shared packages for config, logging, schemas, generated API clients, UI, and utilities. It is a foundation to build products on, not a product itself — there is no roadmap document to consult for scope decisions; ask the user when product intent matters.
 
-The backend currently ships the health module plus the platform infrastructure (Prisma, OpenAPI extraction, structured logging, OpenTelemetry, throttling, env validation). The auth/users modules land in the next phase and are used as the worked examples throughout the docs.
+The backend ships the health module, the platform infrastructure (Prisma, OpenAPI extraction, structured logging, OpenTelemetry, throttling, env validation), and the auth/users/dashboard modules (signup, login, sessions, and the example authenticated dashboard read) that the docs use as worked examples.
 
 ---
 

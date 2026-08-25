@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { createBindingToken, verifyBindingToken } from './lib/auth/binding';
+import { COOKIE_NAME, COOKIE_TTL_SECONDS } from './lib/auth/constants';
+import { SESSION_COOKIE_NAME } from './lib/authentication/session-constants';
 import {
   CORRELATION_ID_HEADER,
   SESSION_ID_COOKIE,
@@ -8,6 +11,7 @@ import {
   isValidCorrelationId,
   normalizeCorrelationId,
 } from './lib/logging/correlation';
+import { pageRoutes } from './lib/routes';
 
 // React's Fizz runtime emits one BUILD-TIME inline script into every
 // cacheComponents static shell — the paint-timing bookkeeping snippet
@@ -83,10 +87,29 @@ const applySecurityHeaders = (response: NextResponse, csp: string): NextResponse
   return response;
 };
 
-// Session-gated route guards (guest fast-path, member presence check, binding
-// cookie verification) land here with the auth feature; until then the proxy's
-// job is the security headers and the correlation/session-id plumbing.
+// Member pages live under /dashboard. Presence check only — Server Components
+// call validateSession() for the authoritative, validated check.
+const isMemberRoute = (pathname: string): boolean =>
+  pathname === pageRoutes.members.dashboard ||
+  pathname.startsWith(`${pageRoutes.members.dashboard}/`);
+
+// Guest-only pages: home, login, and create-account serve signed-out visitors.
+// With cacheComponents their prerendered static shells are sent before the
+// (public)/(guest) layout's dynamic hole resolves, so a layout redirect always
+// paints guest UI first and then visibly hops to the dashboard. The proxy
+// therefore bounces a session-cookie holder BEFORE any HTML is served.
+// Presence check only (mirroring isMemberRoute): the (guest) layout stays the
+// authoritative, validated guard, and a stale cookie self-heals — the
+// (members) layout kills the session via /logout, which clears the cookie and
+// lands back on /login.
+const isGuestRoute = (pathname: string): boolean =>
+  pathname === pageRoutes.home ||
+  pathname === pageRoutes.public.login ||
+  pathname === pageRoutes.public.createAccount;
+
 export const proxy = (request: NextRequest): NextResponse => {
+  const { pathname } = request.nextUrl;
+
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64');
   const isProduction = process.env.NODE_ENV === 'production';
   const csp = buildContentSecurityPolicy(nonce, isProduction);
@@ -106,24 +129,74 @@ export const proxy = (request: NextRequest): NextResponse => {
     : generateCorrelationId();
   const needsSessionCookie = sessionId !== existingSessionId;
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set(CORRELATION_ID_HEADER, correlationId);
-  requestHeaders.set(SESSION_ID_HEADER, sessionId);
+  // Finalize any outgoing response: persist the freshly minted session id
+  // cookie and apply the security headers.
+  const finalize = (response: NextResponse): NextResponse => {
+    if (needsSessionCookie) {
+      response.cookies.set(SESSION_ID_COOKIE, sessionId, {
+        httpOnly: false,
+        secure: isProduction,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: SESSION_ID_COOKIE_MAX_AGE,
+      });
+    }
+    return applySecurityHeaders(response, csp);
+  };
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  const forwardedHeaders = (): Headers => {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-nonce', nonce);
+    requestHeaders.set(CORRELATION_ID_HEADER, correlationId);
+    requestHeaders.set(SESSION_ID_HEADER, sessionId);
+    return requestHeaders;
+  };
 
-  if (needsSessionCookie) {
-    response.cookies.set(SESSION_ID_COOKIE, sessionId, {
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: SESSION_ID_COOKIE_MAX_AGE,
-    });
+  // Navigations only: a server-action POST to a guest page (the login form
+  // itself, e.g. right after another tab signed in) must still reach its
+  // action — a 307 would replay the POST against the dashboard instead.
+  if ((request.method === 'GET' || request.method === 'HEAD') && isGuestRoute(pathname)) {
+    const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+    if (sessionCookie && sessionCookie.value.length > 0) {
+      const dashboardUrl = new URL(pageRoutes.members.dashboard, request.url);
+      return finalize(NextResponse.redirect(dashboardUrl));
+    }
   }
 
-  return applySecurityHeaders(response, csp);
+  if (isMemberRoute(pathname)) {
+    const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+    if (!sessionCookie || sessionCookie.value.length === 0) {
+      const loginUrl = new URL(pageRoutes.public.login, request.url);
+      return finalize(NextResponse.redirect(loginUrl));
+    }
+
+    // Session-binding cookie: a SameSite=Strict HMAC over the session token
+    // (lib/auth/binding.ts), rolled on every member navigation — a CSRF /
+    // session-fixation defence the lax session cookie alone does not give.
+    // Invalid or missing binding forces a full revoke via /logout.
+    const sessionToken = sessionCookie.value;
+    const bindingCookie = request.cookies.get(COOKIE_NAME);
+    if (!bindingCookie || !verifyBindingToken(sessionToken, bindingCookie.value)) {
+      const logoutUrl = new URL(pageRoutes.public.logout, request.url);
+      return finalize(NextResponse.redirect(logoutUrl));
+    }
+
+    const response = NextResponse.next({ request: { headers: forwardedHeaders() } });
+    // Only roll the binding cookie on navigations; POST/server-action bodies
+    // don't set cookies.
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      response.cookies.set(COOKIE_NAME, createBindingToken(sessionToken), {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: COOKIE_TTL_SECONDS,
+      });
+    }
+    return finalize(response);
+  }
+
+  return finalize(NextResponse.next({ request: { headers: forwardedHeaders() } }));
 };
 
 export const config = {

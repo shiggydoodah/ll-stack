@@ -4,7 +4,7 @@ This runbook is the authoritative rule set for building, editing, or planning fe
 
 Human-readable rationale lives at `docs/charters/backend.md`. This file is the rule-shaped enforcement layer. If the two ever disagree, the charter is the source of truth — open a PR to reconcile.
 
-The backend currently ships the health module plus the platform infrastructure; the auth/users modules referenced as examples land in the next phase, and these rules bind from the moment they do. Backend work is not complete until `pnpm verify:backend` (or `pnpm verify`) passes.
+The backend ships the health module, the platform infrastructure, and the auth/users/dashboard modules referenced as examples throughout this file — these rules bind on all of them. Backend work is not complete until `pnpm verify:backend` (or `pnpm verify`) passes.
 
 ---
 

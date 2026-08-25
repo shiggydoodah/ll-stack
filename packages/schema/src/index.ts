@@ -6,6 +6,7 @@ export {
   type DisplayName,
 } from './display-name';
 export { emailSchema, type Email } from './email';
+export { MIN_NAME_LENGTH, MAX_NAME_LENGTH, nameSchema, type Name } from './name';
 export { passwordSchema, type Password } from './password';
 export {
   MIN_USERNAME_LENGTH,

@@ -2,6 +2,9 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// proxy.ts imports the binding-token helpers, which are server-only modules.
+vi.mock('server-only', () => ({}));
+
 import { proxy } from './proxy';
 import {
   CORRELATION_ID_HEADER,
@@ -51,6 +54,47 @@ describe('proxy', () => {
     const cookie = response.cookies.get(SESSION_ID_COOKIE);
     expect(cookie?.value).toEqual(expect.any(String));
     expect(cookie?.value.length).toBeGreaterThan(0);
+  });
+
+  it('redirects a session-cookie holder off guest pages before any HTML is served', () => {
+    const request = makeRequest('/login');
+    request.cookies.set('llstack_session', 'some-session-token');
+
+    const response = proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('http://localhost:4100/dashboard');
+  });
+
+  it('redirects member pages to login when no session cookie is present', () => {
+    const response = proxy(makeRequest('/dashboard'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('http://localhost:4100/login');
+  });
+
+  it('bounces a member page to logout when the binding cookie is missing or invalid', () => {
+    const request = makeRequest('/dashboard');
+    request.cookies.set('llstack_session', 'some-session-token');
+
+    const response = proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('http://localhost:4100/logout');
+  });
+
+  it('passes a member navigation with a valid binding cookie and rolls the binding token', async () => {
+    vi.stubEnv('BINDING_SECRET', 'test-binding-secret-at-least-32-chars-long');
+    const { createBindingToken } = await import('./lib/auth/binding');
+
+    const request = makeRequest('/dashboard');
+    request.cookies.set('llstack_session', 'some-session-token');
+    request.cookies.set('bind_dev', createBindingToken('some-session-token'));
+
+    const response = proxy(request);
+
+    expect(response.status).toBe(200);
+    expect(response.cookies.get('bind_dev')?.value).toEqual(expect.any(String));
   });
 
   it('propagates the correlation and session ids on the forwarded request headers', () => {

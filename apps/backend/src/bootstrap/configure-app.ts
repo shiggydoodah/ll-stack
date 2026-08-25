@@ -5,9 +5,60 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { type OperationIdFactory } from '@nestjs/swagger';
 import { type OpenAPIObject } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { SESSION_COOKIE_NAME } from '../auth/session-cookie.service';
 import { type Env } from '../config/env.schema';
 
 const BACKEND_API_SECRET_SECURITY_SCHEME = 'backendApiSecret';
+
+const HTTP_OPERATION_METHODS = [
+  'get',
+  'put',
+  'post',
+  'delete',
+  'options',
+  'head',
+  'patch',
+] as const;
+
+type HttpOperationMethod = (typeof HTTP_OPERATION_METHODS)[number];
+type OpenApiOperation = NonNullable<
+  NonNullable<OpenAPIObject['paths'][string]>[HttpOperationMethod]
+>;
+
+function operationRequiresSecurityScheme(
+  operation: OpenApiOperation,
+  securityScheme: string,
+): boolean {
+  return (operation.security ?? []).some((requirement) =>
+    Object.prototype.hasOwnProperty.call(requirement, securityScheme),
+  );
+}
+
+/**
+ * `@ApiCookieAuth` sets operation-level security that OVERRIDES the
+ * document-level backendApiSecret requirement in the spec (OpenAPI semantics:
+ * an operation's `security` replaces the document's, it never merges). Left
+ * alone, the generated clients then stop sending `x-api-secret` on every
+ * session-guarded route and the global ApiSecretGuard 401s them. Restore both
+ * schemes explicitly so the client knows to send the secret alongside the
+ * session cookie.
+ */
+function applyCookieAndSecretSecurity(document: OpenAPIObject): void {
+  for (const pathItem of Object.values(document.paths)) {
+    if (!pathItem) continue;
+
+    for (const method of HTTP_OPERATION_METHODS) {
+      const operation = pathItem[method];
+      if (!operation || !operationRequiresSecurityScheme(operation, SESSION_COOKIE_NAME)) {
+        continue;
+      }
+
+      operation.security = [
+        { [SESSION_COOKIE_NAME]: [], [BACKEND_API_SECRET_SECURITY_SCHEME]: [] },
+      ];
+    }
+  }
+}
 
 /**
  * Stable, hand-assigned operationIds keyed by `${ControllerName}.${methodName}`.
@@ -19,6 +70,11 @@ const BACKEND_API_SECRET_SECURITY_SCHEME = 'backendApiSecret';
  */
 export const operationIdsByControllerMethod = new Map<string, string>([
   ['HealthController.getHealth', 'getHealth'],
+  ['AuthController.register', 'registerUser'],
+  ['AuthController.login', 'loginUser'],
+  ['AuthController.logout', 'logoutSession'],
+  ['UsersController.getMe', 'getCurrentUser'],
+  ['DashboardController.getDashboard', 'getDashboard'],
 ]);
 
 const createDefaultOperationId = (
@@ -51,7 +107,16 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       BACKEND_API_SECRET_SECURITY_SCHEME,
     )
     .addSecurityRequirements(BACKEND_API_SECRET_SECURITY_SCHEME)
+    .addCookieAuth(SESSION_COOKIE_NAME, {
+      type: 'apiKey',
+      in: 'cookie',
+      name: SESSION_COOKIE_NAME,
+      description: 'Opaque session bearer cookie issued by /auth/register and /auth/login.',
+    })
     .addTag('health')
+    .addTag('auth')
+    .addTag('users')
+    .addTag('dashboard')
     .build();
 
   const document = SwaggerModule.createDocument(app, openApiConfig, {
@@ -66,6 +131,8 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   if (healthOperation) {
     healthOperation.security = [];
   }
+
+  applyCookieAndSecretSecurity(document);
 
   return document;
 }

@@ -12,9 +12,12 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { createLoggerConfig } from './common/logging/logger.config';
 import { BoundedThrottlerStorage } from './common/throttling/bounded-throttler.storage';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { AuthModule } from './auth/auth.module';
 import { Env, envSchema } from './config/env.schema';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -59,6 +62,9 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule,
     HealthModule,
+    AuthModule,
+    UsersModule,
+    DashboardModule,
   ],
   providers: [
     {

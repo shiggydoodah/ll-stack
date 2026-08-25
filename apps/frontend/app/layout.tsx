@@ -23,7 +23,7 @@ const NonceBoundary = async ({ children }: Readonly<{ children: ReactNode }>) =>
 
 const RootLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="default">
       <body className="font-body bg-(--ui-background) text-(--ui-foreground)">
         <LoggingProvider>
           <Suspense fallback={null}>

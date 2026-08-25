@@ -32,4 +32,12 @@ export function applyAppModuleTestEnv(port: number): void {
   process.env['APPLICATION_NAME'] = 'backend';
   process.env['LOG_SINK'] = 'stdout';
   process.env['LOG_LEVEL'] = 'fatal';
+
+  // Exception to "leave defaulted vars unset": the argon2 knobs default to
+  // production-strength cost (~tens of ms per hash), and auth suites mint many
+  // throwaway accounts. Dial to the argon2 spec minimums — the exact use case
+  // the env vars exist for; staging/production refuse these values at boot.
+  process.env['AUTH_ARGON2_MEMORY_KIB'] = '8';
+  process.env['AUTH_ARGON2_TIME_COST'] = '1';
+  process.env['AUTH_ARGON2_PARALLELISM'] = '1';
 }

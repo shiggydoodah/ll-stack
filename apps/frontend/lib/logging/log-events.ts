@@ -18,6 +18,14 @@ export const FRONTEND_LOG_EVENTS = {
   'action.request.failed': 'action.request.failed',
   'action.auth.missing': 'action.auth.missing',
 
+  // Auth flow (server actions, logout route, layout guards). Reasons only —
+  // never emails, tokens, or cookie values.
+  'auth.login.session_missing': 'auth.login.session_missing',
+  'auth.register.session_missing': 'auth.register.session_missing',
+  'auth.logout.revocation_failed': 'auth.logout.revocation_failed',
+  'session.validation.failed': 'session.validation.failed',
+  'user.current.account_missing': 'user.current.account_missing',
+
   // Server-side error capture (instrumentation.ts onRequestError): an
   // unhandled server error — RSC render, route handler, or server action —
   // recorded with pre-stripping detail (name/message/digest, never a stack).

@@ -64,6 +64,23 @@ export const envSchema = z
     BACKEND_API_SECRET: z.string().min(1),
     ADMIN_API_KEY: z.string().min(1),
 
+    // Session lifetime — drives both the `sessions.expires_at` column and the
+    // session cookie's maxAge (7 days).
+    AUTH_SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
+
+    // Argon2id password-hashing cost (auth.service.ts). The defaults pin the
+    // argon2 library's own production-strength parameters (64 MiB, t=3, p=4)
+    // so a library upgrade can never silently change hashing cost. They exist
+    // as env vars for one reason: at production strength a single hash costs
+    // tens of milliseconds of CPU, and the backend test suite mints many
+    // throwaway accounts — the test env dials these down to the argon2 spec
+    // minimums (8 KiB, t=1, p=1). Weakened values are refused at boot in
+    // staging/production (superRefine below), so the knobs cannot become a
+    // production downgrade path.
+    AUTH_ARGON2_MEMORY_KIB: z.coerce.number().int().positive().default(65_536),
+    AUTH_ARGON2_TIME_COST: z.coerce.number().int().positive().default(3),
+    AUTH_ARGON2_PARALLELISM: z.coerce.number().int().positive().default(4),
+
     // Express `trust proxy` value. Behind a reverse proxy/load balancer, `req.ip`
     // is the proxy's address unless this is set, which collapses every client
     // into one IP throttle bucket. Set it DELIBERATELY for the deployed proxy
@@ -161,6 +178,39 @@ export const envSchema = z
     FRONTEND_ORIGIN: optionalNonEmptyString,
   })
   .superRefine((env, ctx) => {
+    // The argon2 spec requires memory >= 8 KiB per lane; the native addon
+    // rejects the hash call at runtime otherwise. Fail at boot instead of on
+    // the first registration.
+    if (env.AUTH_ARGON2_MEMORY_KIB < 8 * env.AUTH_ARGON2_PARALLELISM) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_ARGON2_MEMORY_KIB'],
+        message: 'AUTH_ARGON2_MEMORY_KIB must be at least 8 x AUTH_ARGON2_PARALLELISM.',
+      });
+    }
+
+    // Fail closed on weakened password hashing. The argon2 cost knobs exist so
+    // the test suite can stop paying production-strength key-stretching for
+    // throwaway accounts; a deployed environment that weakens any of them
+    // would silently degrade every stored password hash. Refuse at boot below
+    // the pinned production parameters.
+    if (env.NODE_ENV === 'staging' || env.NODE_ENV === 'production') {
+      const argon2Floors = [
+        ['AUTH_ARGON2_MEMORY_KIB', 65_536],
+        ['AUTH_ARGON2_TIME_COST', 3],
+        ['AUTH_ARGON2_PARALLELISM', 4],
+      ] as const;
+      for (const [key, floor] of argon2Floors) {
+        if (env[key] < floor) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} must be at least ${floor} in staging or production. The reduced-cost knobs exist for the test suite only; a deployed environment must hash at full production strength.`,
+          });
+        }
+      }
+    }
+
     // Fail closed: in-memory throttling cannot be shared across instances, so a
     // multi-instance staging/production deployment would silently multiply every
     // rate limit by its instance count. Refuse to boot until a shared throttler

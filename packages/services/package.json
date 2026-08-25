@@ -5,12 +5,15 @@
   "type": "module",
   "exports": {
     "./core": "./src/core/service-result.ts",
-    "./health": "./src/health/index.ts"
+    "./health": "./src/health/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./users": "./src/users/index.ts",
+    "./dashboard": "./src/dashboard/index.ts"
   },
   "scripts": {
     "gen": "tsx scripts/gen-client.ts",
     "check:drift": "tsx scripts/check-client-drift.ts",
-    "//build": "Deliberately absent: this package ships TypeScript source (see exports) and emits nothing. Its old build script was `tsc --noEmit` — the identical command the typecheck script still runs — so every verify checked it twice.",
+    "//build": "Deliberately absent: this package ships TypeScript source (see exports) and emits nothing. Its old build script was `tsc --noEmit` \u2014 the identical command the typecheck script still runs \u2014 so every verify checked it twice.",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
