@@ -39,6 +39,12 @@ build` reads env at import time, **and** it means CI fails if an example drifts
 - Node version comes from `.nvmrc`; pnpm from `packageManager` via
   `pnpm/action-setup`, which must stay at **v6 or newer** — v6 is the release
   that added pnpm 11 support and the repo pins pnpm 11.
+- `.nvmrc` must stay at **22.13 or newer** and in step with `.tool-versions`.
+  pnpm 11 declares `engines.node: >=22.13`, so a lower `.nvmrc` fails CI inside
+  `setup-node` — before a single repo command runs — while local dev keeps
+  working off the higher `.tool-versions` value. That drift is invisible to
+  `pnpm verify`: bump `.nvmrc`, `.tool-versions`, and the root `engines.node`
+  together.
 - Keep `AGENTS.md`, `CLAUDE.md`, and `copilot-instructions.md` in sync when
   changing agent rules.
 
