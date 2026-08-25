@@ -94,7 +94,7 @@ const ListSkeleton = () => (
 
 /**
  * Flat-prop wrapper so the lab's prop editor can drive the compound `List`. A status card
- * (composed only from `@ll-ui/react` primitives) wraps the list in a `Box` with an `Avatar`/`Text`
+ * (composed only from `@repo/ui` primitives) wraps the list in a `Box` with an `Avatar`/`Text`
  * header. `preset` picks the leading-icon style (`mixed` shows one of each preset; `custom` uses
  * a Lucide `Star` driven by the `tone` control); `size` scales the chips; `loading` swaps in a
  * `Skeleton` placeholder.

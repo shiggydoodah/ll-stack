@@ -10,7 +10,7 @@ type StackDemoProps = {
   loading: boolean;
 };
 
-// ── Custom profile card (ui-lab only, composed from @ll-ui/react primitives) ─────────
+// ── Custom profile card (ui-lab only, composed from @repo/ui primitives) ─────────
 
 /** Skeleton placeholder mirroring the loaded card's vertical rhythm. */
 const ProfileCardSkeleton = () => (
@@ -43,7 +43,7 @@ const ProfileCardBody = () => (
 
 /**
  * Flat-prop wrapper so the lab's prop editor can drive `Stack`. Wraps a vertical profile card
- * (composed from `@ll-ui/react` primitives) in a `Stack`, with a `loading` toggle that swaps in a
+ * (composed from `@repo/ui` primitives) in a `Stack`, with a `loading` toggle that swaps in a
  * `Skeleton` placeholder. The bordered surface makes the `padding` / `gap` / alignment effects
  * visible.
  */

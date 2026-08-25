@@ -43,7 +43,7 @@ export interface BarsProps extends ComponentPropsWithoutRef<'div'> {
  * `role="img"` with a required `aria-label`; the bars are `aria-hidden`.
  *
  * The per-bar inline `height` is the sanctioned data-driven dynamic style
- * (the `ProgressBar` fill-width precedent) — legitimate inside `@ll-ui/react` only.
+ * (the `ProgressBar` fill-width precedent) — legitimate inside `@repo/ui` only.
  *
  * @example
  * ```tsx

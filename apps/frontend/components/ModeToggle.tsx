@@ -66,7 +66,7 @@ const storePreference = (next: ModePreference): void => {
 
 /**
  * Cycles the colour mode System → Light → Dark by stamping `data-mode` on
- * `<html>` (the ll-ui themes scope their dark values to it) and persisting the
+ * `<html>` (the `@repo/ui` themes scope their dark values to it) and persisting the
  * choice in localStorage.
  */
 const ModeToggle = ({ className }: { className?: string }) => {

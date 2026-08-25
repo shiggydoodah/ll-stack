@@ -1,4 +1,4 @@
-# @ll-ui/react
+# @repo/ui
 
 A theme-agnostic React primitives library + design system. Components read
 every visual decision — colour, type, radius, shadows, borders, motion, letter
@@ -12,8 +12,8 @@ Two CSS imports and one attribute:
 
 ```css
 /* app entry stylesheet */
-@import '@ll-ui/react/styles.css'; /* Tailwind + tokens + base (theme-agnostic) */
-@import '@ll-ui/react/themes/default'; /* the theme(s) you use — only these cost bytes */
+@import '@repo/ui/styles.css'; /* Tailwind + tokens + base (theme-agnostic) */
+@import '@repo/ui/themes/default'; /* the theme(s) you use — only these cost bytes */
 ```
 
 ```html
@@ -21,11 +21,13 @@ Two CSS imports and one attribute:
 ```
 
 Peer dependencies: `react ^19`, `react-dom ^19`, `zod ^4`, Tailwind CSS v4 in
-the consuming app. See the repo root `SETUP.md` for the full per-project
-installation guide (git dependency, Tailwind `@source`, Next.js notes).
+the consuming app. In this monorepo the package is consumed as a workspace
+dependency (`"@repo/ui": "workspace:*"`); `apps/frontend` is the worked example
+— see its `app/globals.css` for the two imports and `app/layout.tsx` for the
+`data-theme` attribute.
 
 ```tsx
-import { Button, Card, Input } from '@ll-ui/react';
+import { Button, Card, Input } from '@repo/ui';
 
 <Button tone="green" variant="solid">
   Save
@@ -36,7 +38,7 @@ import { Button, Card, Input } from '@ll-ui/react';
 
 | Subpath                 | Contents                                                       |
 | ----------------------- | -------------------------------------------------------------- |
-| `@ll-ui/react`          | Root barrel (client-safe only in client components)            |
+| `@repo/ui`              | Root barrel (client-safe only in client components)            |
 | `…/primitives`          | Single-element building blocks (Button, Input, Badge, …)       |
 | `…/components`          | Composed components (Dialog, Drawer, DropDown, fields, …)      |
 | `…/integrations`        | TanStack Form + Table wrappers                                 |
@@ -108,11 +110,11 @@ just recolor it. A theme wanting a different mechanism overrides it in
 ## Icons
 
 Use the shared `Icon` wrapper for consistent sizing and accessibility defaults.
-Import Lucide symbols from `@ll-ui/react/icons`.
+Import Lucide symbols from `@repo/ui/icons`.
 
 ```tsx
-import { Icon } from '@ll-ui/react';
-import { AlertTriangle, Search } from '@ll-ui/react/icons';
+import { Icon } from '@repo/ui';
+import { AlertTriangle, Search } from '@repo/ui/icons';
 
 <Icon icon={Search} />
 <Icon icon={AlertTriangle} decorative={false} label="Warning" />
@@ -122,6 +124,7 @@ import { AlertTriangle, Search } from '@ll-ui/react/icons';
 
 - `COMPONENTS.md` — catalog of every export (what to compose).
 - `CONTEXT.md` — authoring guide (how to add/change components).
-- `pnpm --filter @ll-ui/react verify` — lint, typecheck, theme staleness,
+- `pnpm --filter @repo/ui verify` — lint, typecheck, theme staleness,
   CSS export/purity/guardrail checks, component catalog.
-- `pnpm dev` (repo root) — ui-lab playground with a live theme × mode switcher.
+- Preview a component by rendering it in `apps/frontend` (`pnpm dev` at the repo
+  root) under both themes and both modes.

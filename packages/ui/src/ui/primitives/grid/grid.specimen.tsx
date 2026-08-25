@@ -11,7 +11,7 @@ type GridDemoProps = {
   itemCount: number;
 };
 
-// ── Custom profile card (ui-lab only, composed from @ll-ui/react primitives) ─────────
+// ── Custom profile card (ui-lab only, composed from @repo/ui primitives) ─────────
 
 type Profile = {
   name: string;
@@ -112,7 +112,7 @@ export const gridSpecimen = defineSpecimen<GridDemoProps>({
     'Responsive CSS-grid layout primitive. Declare column counts per breakpoint via the cols ' +
     'prop (a number or a { base, sm, md, lg, xl, 2xl } object) and spacing via the shared gap ' +
     'scale. Cells flow one-per-track; wrap a cell in GridItem to span columns/rows. Columns ' +
-    'collapse to a single track on small viewports. The cards below are composed from @ll-ui/react ' +
+    'collapse to a single track on small viewports. The cards below are composed from @repo/ui ' +
     'primitives and show a Skeleton loading state.',
   component: GridDemo,
   argTypes: {

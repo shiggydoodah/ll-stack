@@ -13,16 +13,17 @@ Each public domain lives under `src/<domain>`:
 - `generated/` is the Hey API output directory and must not be manually edited.
 
 Public package exports and domains are listed in `scripts/domain-manifest.ts`
-(currently just `health`; each new backend surface adds an entry alongside its
-`.addTag(...)` in the backend's `configure-app.ts`). `IGNORED_TAGS` holds
-backend tags that must never be generated or exported. Seeing such a tag in the
-backend's OpenAPI document is not a sign the manifest missed one: adding it
-would ship a client this repo deliberately does not consume.
+(currently `health`, `auth`, `users`, `dashboard`; each new backend surface adds
+an entry alongside its `.addTag(...)` in the backend's `configure-app.ts`).
+`IGNORED_TAGS` holds backend tags that must never be generated or exported.
+Seeing such a tag in the backend's OpenAPI document is not a sign the manifest
+missed one: adding it would ship a client this repo deliberately does not
+consume.
 
 ## Generation flow
 
 ```bash
-pnpm gen:client                      # all domains (run in the gen PR)
+pnpm gen:client                      # all domains
 pnpm gen:client users                # one or more named domains
 pnpm gen:client --list               # pick domains from an interactive multi-select list
 pnpm gen:client --dry-run users      # smoke test → git-ignored .temp/services-gen/
@@ -49,19 +50,35 @@ The generator pipeline in `scripts/gen-client.ts` does this:
 
 Generated output is committed and marked as generated in `.gitattributes`. Do
 not import frontend config here; environment validation stays in
-`apps/frontend/src/config`.
+`apps/frontend/config`.
 
-## Workflow: keep generated output out of feature PRs
+## Workflow: regenerate with the contract change
 
-Regenerated clients are large and bury the reviewable diff, so generation is
-**decoupled** from the contract change:
+A contract change MUST regenerate the affected client(s) and **commit the
+output**. The regenerated client **may ship in the same PR** as the contract
+change, alongside any other backend or frontend work that consumes it — PRs are
+not required to isolate generated output into a standalone generation-only PR.
 
-- A backend **feature PR** ships the contract change only — never the
-  regenerated `packages/services` output.
-- `--dry-run` writes to a git-ignored `.temp/services-gen/<domain>/generated/`
-  dir so an agent can confirm a contract generates cleanly with zero risk of
-  the output reaching the PR. (A brand-new domain has no committed `hey-api.ts`
-  yet, so its generated imports stay unresolved until the gen PR adds it.)
-- The committed client is regenerated and committed in a separate,
-  generation-only branch/PR. See `docs/agents/backend.agents.md` →
-  **Client generation**.
+- Run `pnpm gen:client [<domain>…]` and commit the result with the change.
+- **Optional smoke test.** `pnpm gen:client --dry-run <domain>` writes to a
+  git-ignored `.temp/services-gen/<domain>/generated/` dir, so you can confirm a
+  contract generates cleanly before touching tracked files. It does **not**
+  replace committing the regenerated output. (A brand-new domain has no
+  committed `hey-api.ts` runtime config yet, so its generated imports stay
+  unresolved until the manifest + exports entry is added — expected for a smoke
+  test.)
+- **This is enforced, not just documented.** `check:drift`
+  (`scripts/check-client-drift.ts`, wired into `pnpm verify` and
+  `pnpm verify:backend`) hashes the currently-served OpenAPI document per domain
+  the same way `gen:client` does, and fails — naming the domain and the exact
+  `pnpm gen:client <domain>` to run — when it disagrees with the committed
+  `.source-hash`. A skipped regeneration reds the build.
+
+Generated diffs are large, so keep them reviewable rather than absent:
+regenerate only the domains your contract change actually touched
+(`pnpm gen:client users`, not a bare `pnpm gen:client`), and note that
+`.gitattributes` marks the output `linguist-generated` so GitHub collapses it in
+the PR diff.
+
+See `docs/agents/backend.agents.md` → **Client generation** for the
+authoritative rules.

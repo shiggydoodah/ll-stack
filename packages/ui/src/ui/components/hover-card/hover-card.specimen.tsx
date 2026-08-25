@@ -16,7 +16,7 @@ type HoverCardDemoProps = {
   showArrow: boolean;
 };
 
-// ── Custom profile preview (ui-lab only, composed from @ll-ui/react primitives) ───────
+// ── Custom profile preview (ui-lab only, composed from @repo/ui primitives) ───────
 
 type Profile = {
   name: string;

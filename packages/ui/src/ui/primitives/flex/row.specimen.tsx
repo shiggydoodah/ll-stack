@@ -12,7 +12,7 @@ type RowDemoProps = {
   loading: boolean;
 };
 
-// ── Custom profile row (ui-lab only, composed from @ll-ui/react primitives) ──────────
+// ── Custom profile row (ui-lab only, composed from @repo/ui primitives) ──────────
 
 /** Skeleton placeholder mirroring the loaded row's horizontal layout. */
 const ProfileRowSkeleton = () => (
@@ -44,7 +44,7 @@ const ProfileRowBody = () => (
 
 /**
  * Flat-prop wrapper so the lab's prop editor can drive `Row`. Lays a profile row (composed from
- * `@ll-ui/react` primitives, including a nested `Stack` for the name block) horizontally, with a
+ * `@repo/ui` primitives, including a nested `Stack` for the name block) horizontally, with a
  * `loading` toggle for the `Skeleton` state. `responsive` (default true) collapses the row to a
  * column below the `sm` breakpoint — resize the viewport to see it.
  */

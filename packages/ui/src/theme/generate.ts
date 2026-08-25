@@ -302,7 +302,7 @@ export const generateThemeCss = (
   ].join('\n\n');
 
   const indexCss = [
-    `/* GENERATED — the '${name}' theme entrypoint. Import after @ll-ui/react/styles.css. */`,
+    `/* GENERATED — the '${name}' theme entrypoint. Import after @repo/ui/styles.css. */`,
     `@import './tokens.gen.css';`,
     ...(options.hasCustomCss ? [`@import './${config.custom ?? 'custom.css'}';`] : []),
   ].join('\n');

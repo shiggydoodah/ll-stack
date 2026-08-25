@@ -245,7 +245,7 @@ const DataTablePagination = ({
 );
 
 /**
- * Data-driven table built on `@tanstack/react-table`, rendered through the `@ll-ui/react` `Table`
+ * Data-driven table built on `@tanstack/react-table`, rendered through the `@repo/ui` `Table`
  * primitives so it shares one visual source of truth with hand-composed tables. App-specific
  * cell content (badges, avatars, monospace, action buttons) lives in the caller's column
  * definitions — this component ships the chrome + engine wiring only.

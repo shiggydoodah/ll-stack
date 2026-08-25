@@ -1,7 +1,7 @@
-# `@ll-ui/react` — Component Catalog
+# `@repo/ui` — Component Catalog
 
 **Audience: agents (and humans) composing app UI.** This is the _index_ of every
-building block `@ll-ui/react` ships, so you can pick the right one without reading the
+building block `@repo/ui` ships, so you can pick the right one without reading the
 source tree. It is intentionally lean — one line and the distinctive props per
 component. For the full typed prop API, open the component's `index.ts`; for a
 working usage example, open its colocated specimen. Pointers are at the foot of each
@@ -20,18 +20,18 @@ see `CONTEXT.md`. For the rules on consuming these in the app, see
 
 **Import paths** (mirrors `docs/agents/frontend.agents.md`):
 
-| Need                             | Import from                 |
-| -------------------------------- | --------------------------- |
-| Primitives                       | `@ll-ui/react/primitives`   |
-| Composed components              | `@ll-ui/react/components`   |
-| Form integration (TanStack Form) | `@ll-ui/react/integrations` |
-| Hooks                            | `@ll-ui/react/hooks`        |
-| Providers                        | `@ll-ui/react/providers`    |
-| Icons                            | `@ll-ui/react/icons`        |
-| `cn` + form helpers              | `@ll-ui/react` (barrel)     |
+| Need                             | Import from             |
+| -------------------------------- | ----------------------- |
+| Primitives                       | `@repo/ui/primitives`   |
+| Composed components              | `@repo/ui/components`   |
+| Form integration (TanStack Form) | `@repo/ui/integrations` |
+| Hooks                            | `@repo/ui/hooks`        |
+| Providers                        | `@repo/ui/providers`    |
+| Icons                            | `@repo/ui/icons`        |
+| `cn` + form helpers              | `@repo/ui` (barrel)     |
 
-> **Server components** MUST import from the sub-paths (`@ll-ui/react/primitives`,
-> `@ll-ui/react/icons`, …), never the top-level `@ll-ui/react` barrel — it re-exports
+> **Server components** MUST import from the sub-paths (`@repo/ui/primitives`,
+> `@repo/ui/icons`, …), never the top-level `@repo/ui` barrel — it re-exports
 > client hooks and TanStack Form and is not RSC-safe.
 
 **Shorthand used in the Key-props column:**
@@ -42,7 +42,7 @@ see `CONTEXT.md`. For the rules on consuming these in the app, see
 
 ---
 
-## Primitives — import from `@ll-ui/react/primitives`
+## Primitives — import from `@repo/ui/primitives`
 
 ### Layout
 
@@ -113,7 +113,7 @@ _Full props → `src/ui/primitives/<name>/index.ts` (e.g. `primitives/button/ind
 
 ---
 
-## Components — import from `@ll-ui/react/components`
+## Components — import from `@repo/ui/components`
 
 Composed, multi-element components. Most are compound (a parent plus parts you
 nest); the `parts:` note lists the sub-components, all exported from the same path.
@@ -168,7 +168,7 @@ _Full props → `src/ui/components/<name>/index.ts`. Live example → the coloca
 
 ---
 
-## Form integration — import from `@ll-ui/react/integrations`
+## Form integration — import from `@repo/ui/integrations`
 
 TanStack Form bindings. Build a form with `useAppForm`, render with `Form`, and use
 the bound fields below (they read/write form state directly — no manual wiring).
@@ -222,7 +222,7 @@ _Also re-exports `createColumnHelper` · `flexRender` and the key types (`Column
 
 ---
 
-## Hooks — import from `@ll-ui/react/hooks`
+## Hooks — import from `@repo/ui/hooks`
 
 | Hook                | Use for                                                          | Signature                                                                                                                  |
 | ------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -233,7 +233,7 @@ _Also re-exports `createColumnHelper` · `flexRender` and the key types (`Column
 
 ---
 
-## Providers — import from `@ll-ui/react/providers`
+## Providers — import from `@repo/ui/providers`
 
 | Export                                              | Use for                                                                        | Signature / props                                           |
 | --------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------- |
@@ -243,16 +243,16 @@ _Also re-exports `createColumnHelper` · `flexRender` and the key types (`Column
 
 ---
 
-## Icons — import from `@ll-ui/react/icons`
+## Icons — import from `@repo/ui/icons`
 
-| Export                    | Use for                                | Notes                                                   |
-| ------------------------- | -------------------------------------- | ------------------------------------------------------- |
-| `Icon`                    | Consistent icon sizing + a11y wrapper. | `<Icon icon={SomeLucideIcon} size />`                   |
-| _(all of `lucide-react`)_ | Any Lucide icon, re-exported directly. | `import { ArrowLeft, Check } from '@ll-ui/react/icons'` |
+| Export                    | Use for                                | Notes                                               |
+| ------------------------- | -------------------------------------- | --------------------------------------------------- |
+| `Icon`                    | Consistent icon sizing + a11y wrapper. | `<Icon icon={SomeLucideIcon} size />`               |
+| _(all of `lucide-react`)_ | Any Lucide icon, re-exported directly. | `import { ArrowLeft, Check } from '@repo/ui/icons'` |
 
 ---
 
-## Utilities — import from `@ll-ui/react`
+## Utilities — import from `@repo/ui`
 
 | Export | Use for                                                              | Signature                  |
 | ------ | -------------------------------------------------------------------- | -------------------------- |

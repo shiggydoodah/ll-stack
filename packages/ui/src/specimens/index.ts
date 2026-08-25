@@ -3,7 +3,7 @@
 // Each component folder colocates a `<name>.specimen.ts(x)` describing its
 // public prop surface (`argTypes`) and showcase `variants`. This barrel is the
 // single enumeration point: ui-lab (and any future theme-builder) imports from
-// `@ll-ui/react/specimens`, and `specimens.render.test.tsx` renders everything
+// `@repo/ui/specimens`, and `specimens.render.test.tsx` renders everything
 // in `allSpecimens`. It is intentionally NOT re-exported from the main barrel —
 // demo code must never reach app bundles.
 //

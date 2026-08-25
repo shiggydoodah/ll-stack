@@ -115,7 +115,7 @@ const DataTableDemo = ({
 export const dataTableSpecimen = defineSpecimen<DataTableDemoProps>({
   title: 'DataTable',
   description:
-    'TanStack Table wired into the @ll-ui/react Table primitive. Drive it with `columns` + `data` + ' +
+    'TanStack Table wired into the @repo/ui Table primitive. Drive it with `columns` + `data` + ' +
     'opt-in flags (or hand it a pre-built table instance via the `table` escape hatch). Sorting ' +
     'makes headers keyboard-operable with aria-sort; row selection injects an indeterminate ' +
     'select-all checkbox column; `pagination` adds a client pager (pass a ManualPagination object ' +

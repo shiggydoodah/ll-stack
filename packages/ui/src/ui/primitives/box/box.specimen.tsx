@@ -9,7 +9,7 @@ type BoxDemoProps = {
   loading: boolean;
 };
 
-// ── Custom profile card (ui-lab only, composed from @ll-ui/react primitives) ─────────
+// ── Custom profile card (ui-lab only, composed from @repo/ui primitives) ─────────
 
 /** Skeleton placeholder mirroring the loaded card's vertical rhythm. */
 const ProfileCardSkeleton = () => (
@@ -42,7 +42,7 @@ const ProfileCardBody = () => (
 
 /**
  * Flat-prop wrapper so the lab's prop editor can drive `Box`. Wraps a profile card (composed from
- * `@ll-ui/react` primitives, laid out with a `Stack`) in a `Box`, with a `loading` toggle that swaps in
+ * `@repo/ui` primitives, laid out with a `Stack`) in a `Box`, with a `loading` toggle that swaps in
  * a `Skeleton` placeholder. The `variant` / `padding` / `maxWidth` controls show Box's surface and
  * spacing treatments.
  */
