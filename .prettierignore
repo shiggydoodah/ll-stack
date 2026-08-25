@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.next/
+.vinxi/
+.output/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+packages/services/src/**/generated/
+**/*.gen.ts

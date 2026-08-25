@@ -1,0 +1,25 @@
+{
+  "name": "@repo/testing",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "clean": "rm -rf playwright-report test-results .turbo"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "@repo/config": "workspace:*",
+    "@types/node": "^26.1.1",
+    "@typescript/native": "catalog:",
+    "dotenv": "^17.4.2",
+    "prisma": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,47 @@
+// Schema authored against `docs/charters/database-standards.md`.
+// Agent contributors MUST read `docs/agents/database-standards.agents.md` before editing.
+//
+// Conventions enforced here and by `pnpm prisma:lint`:
+//   - Named PKs (`<modelName>Id`) on UUID v7 with `@db.Uuid @map`
+//   - UUID v7 generated at the service layer via `import { v7 as uuidv7 } from 'uuid'`; NO `@default(uuid())`
+//   - All DateTime fields are `@db.Timestamptz(3)` with `@map`
+//   - All columns mapped to snake_case via `@map`; all tables via `@@map`
+//   - Archetype-correct timestamps (see charter timestamp reference table)
+//   - Explicit `onDelete` on every relation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  MEMBER
+  ADMIN
+}
+
+// ─── Identity ───────────────────────────────────────────────────────────────
+
+model User {
+  userId       String    @id @map("user_id") @db.Uuid
+  // RAW CONSTRAINT: unique_active_user_email (see migration) — partial unique
+  // index on email WHERE deleted_at IS NULL. Email is stored normalized
+  // (trimmed + lowercased) at write time.
+  email        String    @map("email")
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(MEMBER) @map("role")
+  // Soft-delete timestamp. A deleted account's passwordHash is replaced with
+  // an unusable sentinel hash; this field records when.
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@map("users")
+}

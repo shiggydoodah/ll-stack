@@ -1,0 +1,64 @@
+{
+  "name": "default",
+  "defaultMode": "light",
+  "palette": {
+    "ink": "#111113",
+    "paper": "#fafaf9",
+    "indigo": "#4f46e5",
+    "indigo-bright": "#818cf8",
+    "red": "#dc2626",
+    "green": "#16a34a",
+    "amber": "#d97706",
+    "blue": "#2563eb",
+    "purple": "#7c3aed",
+    "magenta": "#db2777"
+  },
+  "modes": {
+    "light": {
+      "background": "paper",
+      "foreground": "ink",
+      "accent": "indigo",
+      "tones": {
+        "red": { "base": "red" },
+        "green": { "base": "green" },
+        "amber": { "base": "amber" },
+        "blue": { "base": "blue" },
+        "purple": { "base": "purple" },
+        "magenta": { "base": "magenta" }
+      }
+    },
+    "dark": {
+      "background": "color-mix(in oklab, {ink} 97%, black)",
+      "foreground": "paper",
+      "accent": "indigo-bright",
+      "tones": {
+        "red": { "base": "color-mix(in oklab, {red} 78%, {paper})" },
+        "green": { "base": "color-mix(in oklab, {green} 82%, {paper})" },
+        "amber": { "base": "color-mix(in oklab, {amber} 85%, {paper})" },
+        "blue": { "base": "color-mix(in oklab, {blue} 75%, {paper})" },
+        "purple": { "base": "color-mix(in oklab, {purple} 78%, {paper})" },
+        "magenta": { "base": "color-mix(in oklab, {magenta} 80%, {paper})" }
+      }
+    }
+  },
+  "fonts": {
+    "body": {
+      "family": "system-ui",
+      "fallbacks": ["-apple-system", "Segoe UI", "Roboto", "sans-serif"]
+    },
+    "display": { "alias": "body" },
+    "mono": {
+      "family": "ui-monospace",
+      "fallbacks": ["SFMono-Regular", "Menlo", "Consolas", "monospace"]
+    }
+  },
+  "radius": { "sm": "6px", "md": "8px", "lg": "12px" },
+  "shadows": {
+    "sm": "0 1px 2px 0 rgb(0 0 0 / 0.06)",
+    "md": "0 4px 12px -2px rgb(0 0 0 / 0.12)",
+    "lg": "0 12px 32px -8px rgb(0 0 0 / 0.22)"
+  },
+  "border": { "width": "1px", "style": "solid" },
+  "motion": { "fast": "150ms", "slow": "300ms", "easing": "cubic-bezier(0.2, 0, 0, 1)" },
+  "display": { "case": "none", "tracking": "0.01em" }
+}

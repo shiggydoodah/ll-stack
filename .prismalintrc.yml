@@ -1,0 +1,54 @@
+# prisma-lint config — enforces the rules in `docs/charters/database-standards.md`.
+# Schema-level conventions that can be statically checked live here. Rules
+# that prisma-lint cannot express (timestamptz, partial unique indexes, raw
+# CHECK constraints, archetype-correct `updatedAt`) are enforced by the agent
+# checklist in `docs/agents/database-standards.agents.md` and by reviewer attention.
+
+rules:
+  # ─── Naming ───────────────────────────────────────────────────────────────
+  enum-name-pascal-case:
+    - error
+  model-name-pascal-case:
+    - error
+  field-name-camel-case:
+    - error
+
+  # Model names are singular (`User`, not `Users`) — the plural form goes on
+  # `@@map`.
+  model-name-grammatical-number:
+    - error
+    - style: singular
+
+  # Every column must be snake_case via `@map`. The rule skips single-word
+  # field names automatically (e.g. `email` needs no map); multi-word names
+  # like `emailNormalized` must be mapped to `email_normalized`.
+  field-name-mapping-snake-case:
+    - error
+    - compoundWords:
+        - DM
+        # Treat the SHA-256 hash term as a single word so `checksumSha256`
+        # maps to `checksum_sha256` rather than `checksum_sha_256`.
+        - Sha256
+
+  # Every table must be pluralized snake_case via `@@map`. e.g. `User` →
+  # `users`, `RefreshSession` → `refresh_sessions`.
+  model-name-mapping-snake-case:
+    - error
+    - pluralize: true
+
+  # ─── Timestamps ───────────────────────────────────────────────────────────
+  # Every model must have `createdAt`. Archetype-correct `updatedAt` /
+  # `deletedAt` are not statically expressible here — see the agent doc.
+  require-field:
+    - error
+    - require:
+        - createdAt
+
+  # `*At` fields must be DateTime. The actual `@db.Timestamptz(3)` annotation
+  # cannot be enforced by prisma-lint (no native-type check for timestamptz);
+  # it remains an agent-checklist rule.
+  require-field-type:
+    - error
+    - require:
+        - ifName: '/At$/'
+          type: DateTime

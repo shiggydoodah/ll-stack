@@ -1,0 +1,4 @@
+@import '@repo/ui/styles.css';
+@import '@repo/ui/themes/default';
+
+@source '.';

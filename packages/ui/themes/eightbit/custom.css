@@ -1,0 +1,50 @@
+/*
+ * eightbit — structural styling the token contract cannot express.
+ * Hand-written; chained after tokens.gen.css by the generated index.css.
+ */
+
+/* Press moves the face into its own shadow, two frames. */
+[data-theme='eightbit'] .ui-btn {
+  box-shadow: var(--ui-shadow-sm);
+}
+[data-theme='eightbit'] .ui-btn:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+[data-theme='eightbit'] .ui-btn:disabled {
+  opacity: 0.55;
+}
+
+/* Plain hard outline instead of the conic focus ring. */
+[data-theme='eightbit'] .ui-btn:focus-visible,
+[data-theme='eightbit'] .ui-field:focus-visible {
+  animation: none;
+  box-shadow: var(--ui-shadow-sm);
+  outline: 3px solid var(--ui-focus-ring);
+  outline-offset: 0;
+}
+[data-theme='eightbit'] .ui-btn:focus-visible::before {
+  content: none;
+}
+
+/* Hard-edged surfaces carry the offset shadow. */
+[data-theme='eightbit'] .ui-card,
+[data-theme='eightbit'] .ui-dialog,
+[data-theme='eightbit'] .ui-popover,
+[data-theme='eightbit'] .ui-dropdown,
+[data-theme='eightbit'] .ui-toast {
+  box-shadow: var(--ui-shadow-md);
+}
+
+/* Filled wells read as recessed: inset shadow, no glow. */
+[data-theme='eightbit'] .ui-field {
+  box-shadow: inset 2px 2px 0 0 color-mix(in srgb, black 25%, transparent);
+}
+
+/* Pixels stay pixels. */
+[data-theme='eightbit'] .ui-avatar img {
+  image-rendering: pixelated;
+}
+[data-theme='eightbit'] {
+  -webkit-font-smoothing: none;
+}

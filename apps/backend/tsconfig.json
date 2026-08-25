@@ -1,0 +1,69 @@
+{
+  "extends": "../../packages/config/tsconfig.nestjs.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": ["jest", "node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", "prisma.config.ts"],
+  "exclude": ["node_modules", "dist"],
+  // Everything under this key is read by ts-node only. `tsc` (build/typecheck)
+  // and jest ignore it entirely — jest carries its own equivalent overrides in
+  // `jest.config.cjs`. Do not "clean up" the duplication between the two: they
+  // configure different runners and both are load-bearing.
+  "ts-node": {
+    // The shared preset compiles with `"module": "node20"`, which preserves
+    // dynamic `import()` as a real ESM import instead of downlevelling it to
+    // `Promise.resolve().then(() => require(...))`. That is correct for the
+    // built `dist/` output, but fatal under ts-node: a real `import()` bypasses
+    // ts-node's CommonJS require hook and goes to Node's ESM loader, which
+    // cannot see `.ts` files (ERR_MODULE_NOT_FOUND). The scripts run via
+    // `-r ts-node/register` (`dev`, `openapi:extract`, `seed`, `flags:align`)
+    // contain such dynamic imports, and none of them are exercised by
+    // `pnpm verify` — this override is the only thing keeping them working.
+    //
+    // Pinning `module` back to CommonJS reintroduces the node10 resolver, which
+    // is deprecated in TypeScript 6 and so needs `ignoreDeprecations` again.
+    "compilerOptions": {
+      "module": "CommonJS",
+      "moduleResolution": "node",
+      "ignoreDeprecations": "6.0",
+      // The node10 resolver above cannot read `exports`-only package manifests.
+      // cookie@2 is ESM-only with no `main` field, so ts-node's type resolution
+      // dies with TS2307 even though (a) tsc under node20 resolves it fine and
+      // (b) the emitted `require('cookie')` works at runtime via Node >=22.12
+      // require(esm). Map the specifier straight to the shipped declarations —
+      // ts-node-only, so tsc/jest never see this. Any future ESM-only,
+      // exports-only dependency of `src/` needs the same treatment; the
+      // `smoke:tsnode` verify step is what tells you.
+      "paths": {
+        "cookie": ["./node_modules/cookie/dist/index"]
+      }
+    },
+    // Consequence of the override above: `tsc` under node20 *requires* `.js` on
+    // relative dynamic-import specifiers (TS2835), but the node10 resolver
+    // cannot map `./x.js` back to `./x.ts` (MODULE_NOT_FOUND). ts-node ships
+    // `experimentalResolver` to bridge exactly that gap and it does not work —
+    // it dies with ERR_INVALID_ARG_TYPE on any specifier resolved through a
+    // package `exports` map, on both Node 22.22.3 (CI and production) and
+    // 24.15.0 (current local toolchain). Do not add it here expecting it to
+    // help. The gap is closed instead by `scripts/ts-node-resolve-js-ext.cjs`,
+    // loaded via a second `-r` flag in every ts-node entry point; that file
+    // carries the full reasoning.
+    //
+    // Nearly every workspace package the backend imports (`@repo/services`,
+    // `@repo/utils`, `@repo/config`) declares
+    // `"type": "module"`, so ts-node would otherwise refuse to `require()` them
+    // (ERR_REQUIRE_ESM). Force those source files to be loaded as CommonJS. The
+    // glob is deliberately broad (`packages/**` rather than an enumerated
+    // subset) because the backend already require()s several ESM-typed packages
+    // and the list grows; an explicit allowlist would silently regress to
+    // ERR_REQUIRE_ESM the next time a new ESM package is imported. The
+    // trade-off: a future workspace package that genuinely needs ESM runtime
+    // semantics (e.g. top-level await) would be coerced to CJS here — revisit
+    // this glob if that ever lands.
+    "moduleTypes": {
+      "../../packages/**/*": "cjs"
+    }
+  }
+}

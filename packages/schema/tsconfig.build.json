@@ -1,0 +1,8 @@
+{
+  // Emits CJS to dist/ for the backend's require(). The shared preset carries
+  // the node20/node16 pair and its rationale; it sits last so it wins over the
+  // dev config's "ESNext"/"bundler".
+  "extends": ["./tsconfig.json", "@repo/config/tsconfig/package-build.json"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

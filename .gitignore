@@ -1,0 +1,37 @@
+node_modules/
+.pnpm-store/
+
+next-env.d.ts
+
+# Build outputs
+**/dist/
+**/.next/
+**/coverage/
+**/*.tsbuildinfo
+.turbo/
+playwright-report/
+test-results/
+blob-report/
+
+# Environment files
+.env
+.env.*
+!.env.example
+# Committed, non-secret e2e test env (consumed by the Playwright webServer)
+!apps/testing/.env.test.example
+
+# Secrets
+.secrets/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Claude Code — per-machine overrides stay local; shared config is committed
+.claude/settings.local.json
+
+# Scratch
+.temp/*
+!.temp/.gitkeep
+TODO.txt

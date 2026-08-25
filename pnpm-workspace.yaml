@@ -1,0 +1,538 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  '@nestjs/core': false
+  argon2: true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  esbuild: true
+  '@parcel/watcher': true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+  # Bruno pulls protobufjs transitively, but this smoke runner does not need
+  # protobufjs install-time builds. Keep blocked unless runtime use requires it.
+  protobufjs: false
+  # posthog-js pulls core-js transitively. Its postinstall only prints a funding
+  # notice — nothing the runtime needs — so keep it blocked and silent.
+  core-js: false
+
+blockExoticSubdeps: true
+# 2 days, expressed in minutes (2 * 24 * 60).
+minimumReleaseAge: 2880
+
+catalog:
+  # TypeScript — Microsoft's documented alias split. `typescript` resolves to
+  # @typescript/typescript6: the 6.x JS compiler API that ts-jest, typescript-eslint,
+  # ts-node and Next still require, with its single bin renamed tsc6 so it shadows
+  # nothing. `@typescript/native` is real typescript@7 (the Go port) and owns the
+  # `tsc` bin — builds and typechecks run native (~4.8× faster). Collapse back to
+  # plain typescript@^7.x when the ecosystem gates clear.
+  typescript: "npm:@typescript/typescript6@^6.0.2"
+  "@typescript/native": "npm:typescript@^7.0.2"
+
+  # Zod
+  zod: "^4.4.3"
+
+  # NestJS core
+  "@nestjs/common": "^11.2.1"
+  "@nestjs/core": "^11.2.1"
+  "@nestjs/platform-express": "^11.2.1"
+  "@nestjs/config": "^4.0.2"
+  "@nestjs/schedule": "^6.1.3"
+  "@nestjs/swagger": "^11.4.7"
+  "@nestjs/throttler": "^6.4.0"
+  "@nestjs/testing": "^11.2.1"
+  "reflect-metadata": "^0.2.2"
+  "rxjs": "^7.8.2"
+
+  # Prisma
+  # Held at 7.9.0 as a security bump: @prisma/dev 0.24.14 (which prisma 7.9.0 pins)
+  # DROPS hono and @hono/node-server entirely in favour of find-my-way, which is what
+  # retires the whole hono advisory cluster at the source — see the deleted hono
+  # overrides below. Move all four @prisma/* entries together (this block plus
+  # @prisma/instrumentation in the OTel block); they are one release train.
+  "prisma": "^7.9.1"
+  "@prisma/client": "^7.9.1"
+  "@prisma/adapter-pg": "^7.9.1"
+  "pg": "^8.23.0"
+  "@types/pg": "^8.23.1"
+
+  # Validation
+  "class-validator": "^0.15.1"
+  "class-transformer": "^0.5.1"
+
+  # Logging
+  "@opentelemetry/api": "^1.9.0"
+  "nestjs-pino": "^4.6.1"
+
+  # OpenTelemetry tracing + metrics (backend-only).
+  # Stable (2.x) and experimental (0.x) ship as ONE release train, and the
+  # experimental packages pin the stable ones to EXACT versions. Bump them
+  # together or the tree installs two copies of the SDK — see the
+  # '@opentelemetry/instrumentation' override below.
+  "@opentelemetry/sdk-node": "^0.221.0"
+  "@opentelemetry/exporter-trace-otlp-http": "^0.221.0"
+  "@opentelemetry/exporter-metrics-otlp-http": "^0.221.0"
+  "@opentelemetry/instrumentation-http": "^0.221.0"
+  "@opentelemetry/instrumentation-express": "^0.69.0"
+  "@opentelemetry/sdk-trace-base": "^2.10.0"
+  "@opentelemetry/sdk-metrics": "^2.10.0"
+  "@opentelemetry/resources": "^2.10.0"
+  "@prisma/instrumentation": "^7.9.1"
+  "pino": "^10.3.1"
+  "pino-http": "^11.0.0"
+  "pino-pretty": "^13.1.3"
+
+  # Security
+  "helmet": "^8.3.0"
+
+  # TanStack (@repo/ui only — frontend app is Next.js)
+  "@tanstack/react-form": "^1.33.5"
+  "@tanstack/react-table": "^8.21.3"
+
+  # Next.js
+  "next": "16.3.1"
+
+  # React
+  "react": "^19.2.8"
+  "react-dom": "^19.2.8"
+
+  # HTTP client
+  "@hey-api/openapi-ts": "^0.99.0"
+
+  # Utilities
+  "uuid": "^14.0.1"
+  "class-variance-authority": "^0.7.1"
+  "clsx": "^2.1.1"
+  "lucide-react": "^1.31.0"
+  "tailwind-merge": "^3.6.0"
+
+  # UI Primitives
+  "cmdk": "^1.0.0"
+  "@radix-ui/react-accordion": "^1.2.20"
+  "@radix-ui/react-scroll-area": "^1.2.18"
+  "@radix-ui/react-popover": "^1.1.23"
+  # Pinned to the same Radix release wave as react-popover/react-dialog (1.1.19) so it
+  # reuses their shared transitive deps instead of pulling a duplicate newer set.
+  "@radix-ui/react-hover-card": "1.1.23"
+  "@radix-ui/react-dialog": "^1.1.23"
+  "@radix-ui/react-tabs": "^1.1.21"
+  "@radix-ui/react-slider": "^1.4.7"
+  # Floored at 1.3.3: react-slot 1.3.1/1.3.2 call React.createContext at module scope
+  # (the SlotContext/PropsProvider experiment), which is absent under React's
+  # `react-server` build and breaks Next RSC page-data collection. 1.3.3 dropped it.
+  # See the matching overrides entry that lifts the transitive exact-1.3.1 pins.
+  "@radix-ui/react-slot": "^1.3.3"
+  "react-easy-crop": "^6.2.3"
+  "sonner": "^2.0.8"
+  "vaul": "^1.1.2"
+
+  # Build
+  "@vitejs/plugin-react": "^6.0.5"
+  "vite": "^8.2.1"
+
+  # Tailwind
+  "tailwindcss": "^4.3.3"
+  "@tailwindcss/postcss": "^4.3.3"
+  "tw-animate-css": "^1.4.0"
+
+  # Prettier
+  "prettier": "^3.9.6"
+  "prettier-plugin-tailwindcss": "^0.8.1"
+
+  # Git hooks
+  "husky": "^9.1.7"
+
+  # ESLint
+  "eslint": "^10.8.1"
+  "@typescript-eslint/eslint-plugin": "^8.67.0"
+  "@typescript-eslint/parser": "^8.67.0"
+  "eslint-config-prettier": "^10.1.5"
+  "eslint-plugin-react": "^7.37.5"
+  "eslint-plugin-react-hooks": "^7.1.1"
+
+  # Testing
+  "vitest": "^4.1.10"
+  "jsdom": "^29.1.1"
+  "@testing-library/react": "^16.0.0"
+  "@testing-library/user-event": "^14.6.5"
+  "jest": "^30.4.2"
+  "@types/jest": "^30.0.0"
+  "ts-jest": "^29.4.12"
+  "supertest": "^7.1.0"
+  "@types/supertest": "^7.2.1"
+  "@playwright/test": "^1.62.1"
+  "@types/react": "^19.2.18"
+  "@types/react-dom": "^19.2.4"
+  "@types/express": "^5.0.1"
+overrides:
+  # CONVENTION — every override below MUST have an explicit upper bound (a major
+  # bound, a caret, or an exact pin), or a comment saying why unbounded is
+  # intentional. An unbounded replacement (e.g. '>=4.1.2') re-resolves to the newest
+  # published version on EVERY lockfile refresh, so it drags the package across major
+  # boundaries silently — the only trace is the lockfile itself, and a green
+  # `pnpm verify` proves nothing when the overridden package is dev/test tooling that
+  # no test exercises. This is not hypothetical: an unbounded js-yaml override floated
+  # @istanbuljs/load-nyc-config from js-yaml 4 to 5 inside a patch+minor-only PR.
+  #
+  # Two knobs, and BOTH matter:
+  #   - the SELECTOR (left) decides which declared ranges get rewritten. Prefer
+  #     scoping it to the vulnerable range, so the override stops governing packages
+  #     that were never vulnerable. A blanket selector is legitimate in exactly two
+  #     cases: (a) nothing declares the package directly, so there is no direct
+  #     dependency for it to downgrade (see handlebars/lodash); or (b) the dependents
+  #     all declare a range too wide to scope, so a scoped selector would match
+  #     nothing and the dedup the override exists for would silently stop working
+  #     (see @opentelemetry/semantic-conventions) — and in case (b) ONLY if the
+  #     replacement TRACKS THE CATALOG, because a blanket selector over a
+  #     directly-declared package rewrites that direct declaration too. Get this
+  #     wrong and the override silently DOWNGRADES a direct dependency (see uuid).
+  #   - the REPLACEMENT (right) decides where they land. Bound it to the major the
+  #     advisory was actually audited against.
+
+  # Bruno CLI pulls axios transitively; keep the workspace audit-clean until upstream
+  # dependency ranges no longer need this repo-wide override. Pinned EXACT (not a
+  # range), so it is bounded by construction. Bumped 1.16.1 -> 1.18.0: everything below
+  # 1.18.0 is vulnerable to a proxy-after-clone SSRF (GHSA-gcfj-64vw-6mp9, high) plus a
+  # cluster of moderate DoS / prototype-pollution / maxBodyLength-bypass advisories
+  # (GHSA-42h9-826w-cgv3, GHSA-xj6q-8x83-jv6g, GHSA-pmv8-rq9r-6j72, GHSA-jqh4-m9w3-8hp9,
+  # GHSA-mmx7-hfxf-jppx, GHSA-f4gw-2p7v-4548, GHSA-hcpx-6fm6-wx23, GHSA-7q8q-rj6j-mhjq,
+  # GHSA-mwf2-3pr3-8698), all patched in 1.18.0.
+  axios: '1.18.0'
+  # brace-expansion has had THREE DoS advisories. They landed at different times and
+  # patched different major lines, but as of the 2026-07-30 release wave all three are
+  # fixed on every line this tree installs, so the selectors below finally share one
+  # story again — each copy is floored inside its own major at the newest advisory's
+  # patch version:
+  #   - GHSA-3jxr-9vmj-r5cp / CVE-2026-13149 (high): exponential-time expansion of
+  #     consecutive non-expanding {} groups. Patched 1.1.16, 2.1.2, 5.0.7.
+  #   - GHSA-mh99-v99m-4gvg / CVE-2026-14257 (high): unbounded expansion length → OOM.
+  #     Patched 5.0.8 FIRST and 5.x-only for a week, which is why the 1.x/2.x copies
+  #     used to sit under an auditConfig.ignoreGhsas suppression: 5.0.8's public API is
+  #     a NAMED `export { expand }` with no callable default, incompatible with the
+  #     `require('brace-expansion')()` convention that minimatch 3.x (eslint-plugin-react,
+  #     glob@7, test-exclude) and minimatch 9.x (jest's glob) call it with, and those
+  #     minimatch lines cannot be lifted to a 5.x-consuming release either (minimatch 10
+  #     exports a non-callable object, which breaks eslint-plugin-react and test-exclude's
+  #     direct `minimatch(a, b)` calls — verified empirically). The advisory was amended
+  #     on 2026-07-31 with backports to 1.1.17 / 2.1.3 / 3.0.3, which removed the reason
+  #     for that suppression; it has been deleted from the foot of this file.
+  #   - GHSA-rgw5-rvv9-x895 / CVE-2026-69152 (high): unbounded INTERMEDIATE arrays,
+  #     bypassing the CVE-2026-14257 mitigation above. Patched 1.1.18, 2.1.4, 3.0.6,
+  #     5.0.9 — every line at once, so all three selectors move to it together.
+  # The 1.x and 2.x patches keep `module.exports = expandTop` (verified against the
+  # published 1.1.18/2.1.4 tarballs), so the callable-default constraint that blocked
+  # the 5.x fix does not apply to them and no suppression is needed anywhere.
+  # The third selector spans >=3.0.0 rather than >=5.0.0 even though its replacement is
+  # on the 5.x line, and that is safe here: no 3.x or 4.x copy actually resolves in this
+  # tree. Its only consumer is minimatch 10 (declares ^5.0.5), which is built against
+  # 5.x's named `expand` export, so the lift is a same-API floor for it and a forward
+  # guard that lands any future 3.x/4.x arrival on the maintained line instead of the
+  # abandoned 3.0.6 backport. The three copies map cleanly onto the three minimatch
+  # majors in the tree: minimatch 3.1.5 → 1.1.18, minimatch 9.0.9 → 2.1.4,
+  # minimatch 10.2.5 → 5.0.9. All selectors stay scoped (nothing declares
+  # brace-expansion directly) and bounded to their own major.
+  'brace-expansion@<1.1.18': '>=1.1.18 <2'
+  'brace-expansion@>=2.0.0 <2.1.4': '>=2.1.4 <3'
+  'brace-expansion@>=3.0.0 <5.0.9': '>=5.0.9 <6'
+  # NOTE — there are deliberately NO hono / @hono/node-server overrides here any more.
+  # Both packages entered this tree through exactly one path (prisma → @prisma/dev),
+  # and @prisma/dev 0.24.14 removed them outright, so as of prisma 7.9.0 neither
+  # package resolves at all and an override would govern nothing. The advisories they
+  # covered were retired upstream rather than pinned around: hono cx()/JSX-context/
+  # API-Gateway-header (GHSA-w62v-xxxg-mg59, GHSA-hvrm-45r6-mjfj, GHSA-xgm2-5f3f-mvvc,
+  # all patched 4.12.27) and @hono/node-server serve-static path traversal
+  # (GHSA-frvp-7c67-39w9, patched 2.0.5 — 1.19.x never got a backport, so an override
+  # would have had to force a major over @prisma/dev's EXACT 1.19.11 pin).
+  # If a future dependency reintroduces hono, re-add scoped overrides at >=4.12.27
+  # and >=2.0.5 respectively rather than resurrecting the old <4.12.25 / <1.19.13 bounds.
+  #
+  # find-my-way is what @prisma/dev 0.24.14 swapped hono OUT for (see the Prisma
+  # catalog note above), and it in turn carries an HTTP/2 request-flood DoS
+  # (GHSA-c96f-x56v-gq3h, high). It reaches the tree ONLY through @prisma/dev, which
+  # pins it EXACT at 9.6.0, so nothing declares it directly and this scoped selector
+  # cannot downgrade a direct dep. The advisory names the patch floor as 9.6.1, but
+  # that tag was never published to npm — 9.7.0 is the first release carrying the fix —
+  # so the replacement floors at >=9.6.1 (which resolves to 9.7.0) and is bounded <10
+  # to the 9.x major the advisory was audited against.
+  'find-my-way@<=9.6.0': '>=9.6.1 <10'
+  #
+  # fast-uri (via ajv, reached from @usebruno/cli's schema layer and prisma's
+  # @prisma/streams-local) has had the SAME class of bug twice: a backslash is treated
+  # as an authority delimiter/introducer, so a crafted URL parses with an
+  # attacker-controlled host. First as a literal delimiter (GHSA-v2hh-gcrm-f6hx /
+  # CVE-2026-16221, high, patched 3.1.4), then as an authority INTRODUCER that got past
+  # that fix (GHSA-7p8r-x3mc-p8w7 / CVE-2026-18446, high, patched 3.1.5). The selector
+  # therefore extends to <=3.1.4 — 3.1.4 is the patch for the first advisory and a
+  # VULNERABLE version for the second — and the replacement floors at the second one.
+  # ajv declares '^3.0.1', so the scoped selector covers the whole vulnerable 3.x
+  # window and nothing else. Bounded to <4: 4.x got both fixes first (4.1.1, 4.1.2), but
+  # each advisory's stated patch floor for this line is the 3.x backport and a major
+  # would leave ajv's own caret, so keep this on the line ajv actually depends on.
+  'fast-uri@>=3.0.0 <=3.1.4': '>=3.1.5 <4'
+  # NOTE — there is deliberately NO sharp override here any more. It covered four
+  # libvips CVEs inherited by sharp<0.35.0 (CVE-2026-33327, CVE-2026-33328,
+  # CVE-2026-35590, CVE-2026-35591 / GHSA-f88m-g3jw-g9cj, high), and existed only
+  # because sharp arrives as next's optionalDependency and next was still declaring
+  # the vulnerable '^0.34.5' with no fixed stable to move to.
+  # next 16.3.1 declares sharp '^0.35.3' — upstream now floors it above the whole
+  # advisory range on its own, so the scoped 'sharp@<0.35.0' selector no longer
+  # intersects any declared range and governed nothing. Verified empirically rather
+  # than assumed: with the override deleted, `pnpm why -r sharp` still reports a
+  # single sharp@0.35.3. Retired at the source rather than left as inert config with
+  # a comment that had gone stale, matching the hono note above.
+  # If a future dependency reintroduces a sharp below 0.35.0, re-add a scoped
+  # 'sharp@<0.35.0': '^0.35.3' rather than a blanket one — and note that the old
+  # "never actually loaded" safety argument still holds only while neither Next app
+  # calls next/image (every image in this repo is a plain <img>).
+  #
+  # handlebars (via @usebruno/cli → its template layer; dev/smoke-runner only).
+  # BLANKET selector is deliberate — no workspace package declares handlebars
+  # directly, so there is no direct dependency for this to downgrade. Bounded to
+  # <5 so a future major cannot arrive unreviewed on a lockfile refresh.
+  handlebars: '>=4.7.9 <5'
+  # Bounded to <9 to stay on the 8.x line next/vite/tailwind depend on.
+  'postcss@<8.5.10': '>=8.5.10 <9'
+  # nanoid has two infinite-loop DoS advisories, and the two copies in this tree sit on
+  # OPPOSITE sides of the first patch, so the floor has to be the SECOND one:
+  #   - GHSA-28wg-ghj8-5hjv (high): the non-secure generator loops forever on a negative
+  #     size. Patched 3.3.16.
+  #   - GHSA-2v37-7h3g-55p8 / CVE-2026-67213 (high): a custom generator loops forever when
+  #     size is zero — a case the first fix did not cover. Patched 3.3.18, and that floor is
+  #     an AMENDMENT: the advisory shipped naming 3.3.17 as the fix, then GitHub corrected it
+  #     to 3.3.18 on 2026-08-13 (advisory-database commit fcd0c1ef, a one-line
+  #     `"fixed": "3.3.17"` -> `"3.3.18"`). 3.3.17's fix (commit f9d13f15) patched every
+  #     entrypoint EXCEPT async/index.native.js, and 3.3.18 (PR #606) is that one file — the
+  #     whole 3.3.17 -> 3.3.18 diff is a `size <= 0` guard there plus a README link. That
+  #     residual gap is React-Native-only (reachable solely through the `react-native`
+  #     condition on nanoid/async), so it was never live in this tree, but pnpm audit
+  #     rightly reads version numbers rather than reachability. Floor at the amended patch.
+  # Copy one is @usebruno/cli's (converters/js/schema each pin nanoid EXACT at 3.3.8),
+  # vulnerable to both. Copy two is postcss 8.5.23's (declares ^3.3.16), which resolved to
+  # exactly 3.3.16 — patched for the first advisory, still vulnerable to the second. A
+  # 3.3.16 floor would therefore look like a fix while leaving half the tree exposed.
+  # Updating the parent is not on offer for the Bruno copy: 4.0.0 is the newest @usebruno/cli
+  # and it pins converters/js to the very versions carrying the exact 3.3.8 pin, so an
+  # override is the only route. postcss's caret already admits the fix on its own, so this
+  # scoped selector does not need to govern it — a lockfile refresh floats it to the same
+  # patched version and the two copies DEDUPE onto one (verified: `pnpm why nanoid` now
+  # reports a single 3.3.18, where it previously found 3.3.8 and 3.3.16 side by side).
+  # Nothing in the workspace declares nanoid directly, so the selector cannot downgrade a
+  # direct dep.
+  # Bounded to <4, and that bound is load-bearing rather than routine: nanoid 4 dropped
+  # CommonJS (latest is 6.x, ESM-only) and both dependents reach it through `require`, so an
+  # unbounded replacement would break Bruno and postcss on the next lockfile refresh. 3.3.18
+  # keeps `main: index.cjs` and the `require` export condition unchanged, so the lift is a
+  # no-op for both of them.
+  'nanoid@<3.3.18': '>=3.3.18 <4'
+  # lodash@4.17.21 (via prisma-lint → chevrotain, and @nestjs/config + @nestjs/swagger
+  # at backend runtime) is vulnerable (GHSA-r5fr-rjxr-66jc, GHSA-xxjr-mmjv-4gpg,
+  # GHSA-f23m-r3pf-42rh). BLANKET selector is deliberate — no workspace package
+  # declares lodash directly, so there is no direct dependency for this to downgrade.
+  # Bounded to <5; lodash 5 has never been published and the advisory fix is 4.x-only.
+  lodash: '>=4.17.24 <5'
+  # Every OTel package depends on semantic-conventions via a wide caret (core declares
+  # ^1.29.0), so an incremental lockfile refresh happily KEEPS an older copy that still
+  # satisfies the caret while the catalog's direct dep moves to the new one — landing two
+  # copies (1.41.1 + 1.42.0) purely as a resolution artifact. It is a constants-only
+  # package, so duplication is harmless at runtime, but it breaks the single-copy
+  # invariant the OTel train is meant to hold. Force one version; bounded to <2 so a
+  # future 2.x major cannot arrive unaudited on a refresh.
+  #
+  # BLANKET selector, and unlike handlebars/lodash this one DOES govern a direct
+  # dependency: apps/backend declares '@opentelemetry/semantic-conventions': catalog:
+  # (-> ^1.43.0). Scoping cannot fix that — the wide ^1.29.0 above is not a subset of
+  # any '<1.43.0'-style selector, so a scoped selector would match nothing and the
+  # dedup this override exists for would silently stop working. Blanket is correct
+  # here; what it costs is a second edit site. Keep in lockstep with the catalog — if
+  # the catalog moves to 2.x, move this with it, or it will rewrite the backend's own
+  # direct declaration straight back down to the 1.x line.
+  '@opentelemetry/semantic-conventions': '^1.43.0'
+  # @prisma/instrumentation@7.9.0 declares '@opentelemetry/instrumentation': ^0.207.0,
+  # and a caret on a 0.x pins the MINOR (>=0.207.0 <0.208.0) — so it accepts neither
+  # the train we run nor any newer one. Meanwhile sdk-node and instrumentation-http
+  # pin it to an EXACT 0.221.0. Without this override the tree resolves two copies of
+  # @opentelemetry/instrumentation and Prisma spans are patched against the wrong one.
+  # Pinned exact (not a range) and moved in lockstep with the catalog's OTel train.
+  '@opentelemetry/instrumentation': '0.221.0'
+  # tmp<0.2.6 (via @usebruno/cli → jscodeshift) has path traversal vulnerability
+  # (GHSA-ph9p-34f9-6g65). Pinned EXACT, so it is bounded by construction.
+  tmp: '0.2.7'
+  # uuid@10.0.0 (via @usebruno/js, which still declares ^10.0.0) is vulnerable to a
+  # buffer overread (GHSA-w5hq-g745-h8pq).
+  #
+  # This one needs care, because it is the only override here with PRODUCTION RUNTIME
+  # surface — apps/backend imports uuid directly (`uuid: "catalog:"` -> ^14.0.1).
+  #
+  # It used to be a BLANKET override (`uuid: '>=11.1.1'`), which rewrote every uuid
+  # range in the tree, not just the vulnerable one it was written for. That makes the
+  # obvious fix wrong in both directions:
+  #   - blanket + major bound (`>=11.1.1 <12`) would force the backend's direct ^14
+  #     DOWN to 11.x — an override silently downgrading a direct dependency;
+  #   - blanket + unbounded (the old form) means a future uuid 15 lands in backend
+  #     runtime code on a lockfile refresh with no review signal.
+  # So SCOPE the selector to the vulnerable range only. ^14.0.1 does not intersect
+  # <11.1.1, so the backend's direct dependency is now untouched by this override and
+  # cannot be moved by it at all.
+  #
+  # The replacement is the 14 line rather than the 11 line the advisory was filed
+  # against, so Bruno SHARES the backend's existing copy instead of installing a
+  # second one — scoping the selector without this would leave Bruno on 11.x and take
+  # the tree from one uuid to two. Keep in lockstep with the catalog's uuid: if the
+  # catalog moves to 15, either move this with it or accept a second copy.
+  'uuid@<11.1.1': '^14.0.1'
+  # esbuild<0.28.1 (via vite + tsx, dev/build-time only) is vulnerable to a binary
+  # integrity bypass enabling RCE via NPM_CONFIG_REGISTRY (GHSA-gv7w-rqvm-qjhr, high)
+  # and arbitrary file read on the Windows dev server (GHSA-g7r4-m6w7-qqqr, low).
+  # Bounded to ^0.28.1 so the patch stays inside the 0.28 line vite/tsx pin to.
+  'esbuild@<0.28.1': '^0.28.1'
+  # ws<8.21.0 (dev/test-only: jsdom → ws via vitest) allows memory-exhaustion DoS
+  # from tiny fragments/data chunks (GHSA-96hv-2xvq-fx4p, high). Also a floor
+  # should a future runtime dependency (e.g. a socket.io stack) reintroduce ws on
+  # a serving path. Bounded to <9 to stay on the 8.x line jsdom depends on.
+  'ws@<8.21.0': '>=8.21.0 <9'
+  # form-data<4.0.6 (via @usebruno/cli → axios) is vulnerable to CRLF injection
+  # through unescaped multipart field/file names (GHSA-hmw2-7cc7-3qxx, high).
+  # Bounded to <5: the fix and the audit are both on the 4.x line.
+  'form-data@>=4.0.0 <4.0.6': '>=4.0.6 <5'
+  # protobufjs (via @usebruno/cli grpc deps) lets schema-derived names shadow
+  # runtime-significant properties (GHSA-f38q-mgvj-vph7, moderate). Patched on both
+  # lines; keep each install inside its own major. Two copies (7.x + 8.x) are
+  # EXPECTED here — that is the point of the two scoped selectors.
+  'protobufjs@<=7.6.2': '>=7.6.3 <8'
+  'protobufjs@>=8.0.0 <=8.5.0': '>=8.5.1 <9'
+  # js-yaml has now had THREE quadratic-complexity DoS advisories on the 4.x line, each
+  # superseding the last as the binding floor:
+  #   - repeated aliases in <=4.1.1 (GHSA-h67p-54hq-rp68, moderate), patched 4.1.2
+  #   - merge-key CHAINS in <4.3.0 (GHSA-52cp-r559-cp3m, high), patched 4.3.0
+  #   - !!omap resolution in <4.3.1 (GHSA-5p4m-2wfm-xmqj / CVE-2026-59870, high):
+  #     resolving an ordered-map node is quadratic in its entry count, so a small
+  #     document pins a CPU. Fixed on 5.x first and NOT backported for a month; 4.3.1
+  #     (2026-07-31) is that backport, and it is the only patched 4.x version.
+  # The first two selectors are therefore redundant — anything they matched is also
+  # <4.3.1 — so they collapse into ONE selector, which keeps the previous '<=4.1.1'
+  # breadth on the low side.
+  # That low side is load-bearing, NOT an accident: @istanbuljs/load-nyc-config@1.1.0
+  # declares js-yaml ^3.13.1, so this selector is what lifts it across the 3→4 major
+  # boundary onto the copy the rest of the tree already installs. It is safe because that
+  # package only calls js-yaml `.load()`, which survives v4's removal of safeLoad/safeDump,
+  # and 1.1.0 is unmaintained so its call surface is static. Narrowing the selector to
+  # '>=4.0.0' instead resolves a real third copy (js-yaml 3.15.1, dragging back argparse@1
+  # + esprima + sprintf-js) — verified empirically — which is the duplicate-copy outcome
+  # the uuid note above exists to avoid. The 3.x line has its own backport at 3.15.1 if a
+  # future dependent ever needs to stay on it; prefer a scoped 3.x selector then, rather
+  # than narrowing this one and leaving load-nyc-config to install its own copy.
+  # The live 4.x holdout is @hey-api/json-schema-ref-parser (via @hey-api/openapi-ts, the
+  # dev-time client generator), which hard-pins js-yaml with no upstream release that
+  # bumps it — 1.4.4 / openapi-ts 0.99.0 are both latest — so an override is the only fix
+  # available. 4.3.0 → 4.3.1 is a same-major patch.
+  # Bounded to <5 because the load-nyc-config safety argument was only ever audited
+  # against v4 — unbounded, this override resolves to the newest published major on
+  # every lockfile refresh, and had already floated load-nyc-config onto js-yaml 5.
+  # The 5.x line (via @nestjs/swagger) has its OWN advisory: exponential parsing time in
+  # flow collections → DoS (GHSA-pm4m-ph32-ghv5, high), vulnerable >=5.0.0 <=5.2.1,
+  # patched 5.2.2. It keeps a separate selector, on its own major, bounded to <6. It is
+  # NOT affected by the !!omap advisory — 5.x is where that fix originated.
+  'js-yaml@<4.3.1': '>=4.3.1 <5'
+  'js-yaml@>=5.0.0 <=5.2.1': '>=5.2.2 <6'
+  # @opentelemetry/core<2.8.0 allows unbounded memory allocation in W3C Baggage
+  # propagation (GHSA-8988-4f7v-96qf, moderate). The original holdout was
+  # instrumentation-express 0.67, which pulled core 2.7.1; on the 0.221/2.10 train
+  # every experimental package pins core to an exact 2.10.0 and express 0.69
+  # declares ^2.9.0, so this now resolves 2.10.0 on its own and the override is an
+  # inert FLOOR rather than a live fix. Kept as a floor so a future package cannot
+  # reintroduce a vulnerable core, and bounded to <3 so it can never drag the tree
+  # onto an unaudited 3.x major on a lockfile refresh. Nothing in the workspace
+  # declares core directly, so the selector cannot downgrade a direct dep; move the
+  # floor with the train so a dependent declaring an older range is lifted onto the
+  # train's copy instead of installing a second one.
+  '@opentelemetry/core@<2.10.0': '>=2.10.0 <3'
+  # multer<2.2.0 (backend runtime: @nestjs/platform-express → multer) has two DoS
+  # advisories: unbounded memory from deeply nested field names (GHSA-72gw-mp4g-v24j,
+  # high) and incomplete cleanup of aborted uploads exhausting resources
+  # (GHSA-3p4h-7m6x-2hcm, moderate). Both patched in 2.2.0; bound to >=2.2.0 <3 to stay
+  # inside the 2.x line Nest depends on — this is backend runtime (Express multipart
+  # handling), so an unreviewed major here would land on a serving path.
+  'multer@>=1.0.0 <2.2.0': '>=2.2.0 <3'
+  # jest's internals (@jest/types, jest-util, jest-haste-map, jest-worker) and
+  # protobufjs declare floating @types/node ranges that can re-resolve their own
+  # copy of the Node typings on a lockfile refresh. Hold the whole tree on the
+  # single 26 line the catalog pins — two copies of the Node typings in one
+  # compilation is how you get duplicate global declarations
+  # (`Duplicate identifier 'Buffer'`).
+  '@types/node': '^26.2.0'
+  # undici<7.28.0 (dev/test-only: jsdom→undici via vitest + @usebruno/cli→cheerio)
+  # has two advisories: TLS certificate validation bypass via dropped requestTls in
+  # the SOCKS5 ProxyAgent (GHSA-vmh5-mc38-953g, high) and cross-user info disclosure
+  # via a shared-cache whitespace bypass (GHSA-pr7r-676h-xcf6, moderate). Both fixed
+  # in 7.28.0; bound to <8 to stay on the 7.x line jsdom 29 / cheerio depend on.
+  'undici@>=7.0.0 <7.28.0': '>=7.28.0 <8'
+  # valibot<=1.4.1 lets record() issue paths make flatten() throw for inherited Object
+  # property names (GHSA-5qjj-4xww-7phc, moderate). It reaches the tree ONLY through
+  # @prisma/dev (the dev-time Prisma toolkit pulled by prisma → @prisma/client), which
+  # pins it EXACT at 1.2.0, so nothing declares it directly and this scoped selector
+  # cannot downgrade a direct dep. 1.2.0 → 1.4.2 is a same-major minor; bounded to <2 so
+  # a future major cannot arrive unreviewed on a lockfile refresh.
+  'valibot@<=1.4.1': '>=1.4.2 <2'
+  # deepmerge-ts<8.0.0 recurses with no cycle detection, so two values that self-reference at
+  # the same property path merge until Node throws RangeError: Maximum call stack size
+  # exceeded (GHSA-ggr8-5vv4-36mx / CVE-2026-40345, high, CWE-674).
+  #
+  # This is the ONLY override here that crosses a MAJOR boundary to reach its fix, so the
+  # usual "bound it to the major the advisory was audited against" rule cannot apply — 8.0.0
+  # IS that major. There is no 7.x backport and there will not be one: the advisory lists
+  # 8.0.0 as the sole patched version, and 7.1.6 (published five days before it) is a
+  # types-only fix for index signatures, with no cycle-detection code in its dist. Updating
+  # the parent is not on offer either — deepmerge-ts reaches this tree through exactly one
+  # path, @prisma/config, which pins it EXACT at 7.1.5, and prisma 7.9.1 is the newest
+  # stable (8.0.0 is still rc). So a major-crossing override is the only route.
+  #
+  # Crossing that boundary is safe HERE because the 8.0.0 breaking changes miss the one
+  # call site. @prisma/config uses the bare `deepmerge` and nothing else — it hands it to
+  # c12 as the `merger` for loading prisma.config.ts (apps/backend/prisma.config.ts), at
+  # CLI/build time, over local trusted config objects. Against that usage 7.1.5 -> 8.0.1 is
+  # a drop-in: identical module format ("type": "module" + main ./dist/index.cjs + the same
+  # exports map), identical engines (node >=16), zero runtime deps, and a purely ADDITIVE
+  # runtime export list. Of the four documented breaks, three cannot bite — two are type
+  # renames (DeepMergeIntoFunctionUtils, DeepMergeMetaMetaData) and one is a deepmergeInto
+  # mutation fix, and @prisma/config imports no types and never calls deepmergeInto. The
+  # fourth is a real default-behaviour change — Map values are now deep-merged instead of
+  # last-value-wins — which is inert for plain-object config files.
+  # Worth knowing for the next reader: 8.0.0's fix is a `maxDepth` that defaults to 1000 and
+  # SILENTLY TRUNCATES to last-value-wins rather than throwing, and the bare `deepmerge`
+  # takes no options object, so that default is not overridable. Config trees nowhere near
+  # 1000 levels deep, so it does not matter here — but it would matter for any future
+  # dependent that merges deeply nested user data through this same forced copy.
+  #
+  # Selector scoped to the vulnerable range and nothing in the workspace declares
+  # deepmerge-ts directly, so it cannot downgrade a direct dep. Bounded to <9: 8.x is the
+  # line the fix landed on and the only line reviewed above, and a 9.x arriving unreviewed
+  # on a lockfile refresh would land straight in the Prisma CLI path.
+  'deepmerge-ts@<8.0.0': '>=8.0.0 <9'
+  # @radix-ui/react-slot 1.3.1/1.3.2 evaluate `React.createContext(mergeProps)` at
+  # module scope (their short-lived SlotContext/PropsProvider). React's `react-server`
+  # build omits createContext, so any Server Component graph that transitively imports
+  # react-slot throws "createContext is not a function" during Next's page-data
+  # collection (hit here via @repo/ui primitives in the admin-dashboard app).
+  # 1.3.3 removed that call while keeping the createSlot export react-primitive needs.
+  # react-primitive 2.1.8 and react-dialog/react-popover/react-collection all hard-pin
+  # react-slot to EXACT 1.3.1, so the catalog floor above cannot dislodge them — this
+  # override lifts those transitive pins to the fixed line. Selector scoped to the two
+  # broken versions only (1.3.0 and the 1.2.x copies are unaffected and left alone);
+  # bounded to <1.4 to stay on the 1.3.x line and not float onto an unaudited 1.4 that
+  # could reintroduce the module-scope context. Drop once every dependent's exact pin
+  # has moved off 1.3.1 on its own.
+  '@radix-ui/react-slot@>=1.3.1 <1.3.3': '>=1.3.3 <1.4'
+
+# NOTE — there is deliberately NO auditConfig block here any more. It carried exactly
+# one entry, ignoreGhsas: [GHSA-mh99-v99m-4gvg], suppressing the brace-expansion
+# unbounded-expansion DoS for the 1.1.16 / 2.1.2 copies that had no fix on their own
+# major. Upstream amended that advisory on 2026-07-31 with 1.1.17 / 2.1.3 backports and
+# the follow-up GHSA-rgw5-rvv9-x895 shipped 1.1.18 / 2.1.4, so the brace-expansion
+# overrides above now reach every copy and nothing needs suppressing. Prefer an override
+# over an ignoreGhsas entry; add this block back only for an advisory with no
+# non-breaking upstream fix, and say why the exposure is unreachable here.
