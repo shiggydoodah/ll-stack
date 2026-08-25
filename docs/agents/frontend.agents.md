@@ -123,10 +123,15 @@ If you need a building block that belongs in `@repo/ui` (app-agnostic, reusable 
 ### Gateways and Backend Calls
 
 - Gateways MUST live in `apps/frontend/lib/gateway/<domain>.ts` — one file per backend domain — and start with `import 'server-only'`.
-- Every backend call MUST go through `gatewayWrapper` (`lib/gateway/gateway-wrapper.ts`) and return the `ServiceResult<T, E>` envelope; callers MUST handle the `ok: false` branch at the call site.
-- `withAuth` defaults to true (session cookie injected). Public endpoints MUST set `{ withAuth: false }` explicitly.
+- Every backend call MUST go through `gatewayWrapper` (`lib/gateway/gateway-wrapper.ts`), which owns session/correlation headers, lifecycle logging, and normalization — MUST NOT re-implement any of those in a gateway function.
+- Gateways MUST declare `type ThrowOnError = false` and type their `options` param from the generated client (`Options<XData, ThrowOnError>`) — MUST NOT re-declare the request shape by hand.
+- A gateway MUST either return the `ServiceResult<T, E>` envelope (callers MUST handle the `ok: false` branch at the call site) or unwrap to a domain value. Unwrapping MUST validate the payload shape and log a registered event on drift rather than assume it — the `parseCurrentUser` precedent in `lib/gateway/users.ts`. Unwrap only when no caller can act on the difference between failure modes.
+- Callers branching on a specific backend failure MUST use `errorCode(result.error)` (`lib/gateway/error-code.ts`) or `result.status` — MUST NOT branch on `result.message`.
+- Gateways MUST NOT contain feature logic, user-facing copy, or redirects — mapping a status to a member-facing message is the server action's job.
+- `withAuth` defaults to true (session cookie injected). `{ withAuth: false }` MUST be set explicitly for (a) genuinely public endpoints and (b) calls that supply the cookie themselves via `buildSessionCookieHeader` (the cached path, where `cookies()` is unavailable). Case (b) MUST pass its own session header — `withAuth: false` means "the wrapper is not resolving the session", not "this call is unauthenticated".
 - The `logContext` string MUST follow the `` `[${SERVICE_NAME}] <operation>` `` pattern used by the existing gateways.
 - Cached reads MUST follow the cached-gateway pattern (worked example: `getCurrentUserCached` in `lib/gateway/users.ts`): `'use cache'` + `cacheLife(cacheLifeProfiles.<profile>)` (`lib/cache/life.ts`) + `cacheTag(cacheTags.<entity>(id))` (`lib/cache/tags.ts`); session-scoped reads compose `withSessionCache` (`lib/cache/utils.ts`). MUST NOT call request-scoped APIs (cookies, request context) inside `'use cache'`.
+- Auth decisions MUST NOT read from a cached gateway — `validateSession` uses the uncached path with `cache: 'no-store'`. Cached reads are for display only.
 - Mutations MUST invalidate what they made stale (`revalidatePath` or the matching cache tag).
 - MUST NOT hand-edit generated output under `packages/services` — it is regenerated from the backend contract via `pnpm gen:client`, which may ship in the same PR as the backend contract change and the frontend work that consumes it. A missing endpoint or field is a backend contract change awaiting client regeneration, not a hand-rolled `fetch`.
 

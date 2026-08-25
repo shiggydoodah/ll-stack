@@ -146,11 +146,23 @@ A missing session redirects to login by default (`onAuthMissing`). Why a ladder:
 
 ## Gateways
 
-Gateways (`apps/frontend/lib/gateway/`) are the only consumers of the generated `@repo/services` clients. One file per backend domain — `auth.ts`, `users.ts`, `app-status.ts` — each starting with `import 'server-only'` so a client-bundle import is a build error, not an incident.
+Gateways (`apps/frontend/lib/gateway/`) are the only consumers of the generated `@repo/services` clients. One file per backend domain — `auth.ts`, `users.ts`, `dashboard.ts` — each starting with `import 'server-only'` so a client-bundle import is a build error, not an incident.
 
-Every call goes through `gatewayWrapper` (`apps/frontend/lib/gateway/gateway-wrapper.ts`):
+The layer is two halves, split on purpose:
+
+| Half                 | Lives in                         | Owns                                                                                                                                              |
+| -------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The gateway function | `lib/gateway/<domain>.ts`        | Everything domain-specific: which generated client function to call, how the caller's options are merged, and what shape comes back to the app    |
+| `gatewayWrapper`     | `lib/gateway/gateway-wrapper.ts` | Everything generic: session-cookie injection, correlation headers, lifecycle logging with timing, and normalizing every outcome into one envelope |
+
+Why split it there: the generic half is identical for every call and easy to forget one piece of, so it is written once and cannot be opted out of. The domain half differs per endpoint and belongs beside the endpoint. The payoff is that a new gateway function is a few lines saying _what to call_ and _what comes back_ — and says nothing about auth or logging at all.
+
+### Anatomy of a gateway function
 
 ```typescript
+type ThrowOnError = false;
+const SERVICE_NAME = 'auth gateway';
+
 export const login = async (options: Options<LoginUserData, ThrowOnError>) =>
   gatewayWrapper(
     (headers) =>
@@ -162,7 +174,37 @@ export const login = async (options: Options<LoginUserData, ThrowOnError>) =>
   );
 ```
 
-What the wrapper buys, once, for every call: correlation headers (`x-request-id`, `x-session-id`) for cross-tier log joins; session-cookie injection (`withAuth` defaults to **true** — public endpoints opt out explicitly, so "which calls go out unauthenticated?" is greppable); gateway lifecycle log events; and normalization of every outcome — success, HTTP error, network failure — into one envelope:
+Four things are load-bearing here:
+
+- **The call is passed in as a callback, not made by the wrapper.** The wrapper cannot know the shape of a given client function's options, so it builds the headers and hands them back; the gateway merges them into the options it was given. Wrapper headers are spread last, so a caller can add headers but cannot overwrite the session cookie or the correlation ids.
+- **`type ThrowOnError = false`** pins the generated client's `Options` to its non-throwing variant. A caller cannot ask the client to throw and route around the envelope — every outcome comes back as `{ data, error, response }` for the wrapper to normalize.
+- **The caller's `Options` type comes from the generated client** (`Options<LoginUserData, …>`). The gateway does not re-declare the request shape, so a backend contract change lands as a compile error in the gateway rather than a runtime surprise in a component.
+- **`logContext` follows `` `[${SERVICE_NAME}] <operation>` ``** — every log line from this call is greppable by domain and by operation.
+
+### What the wrapper does on every call
+
+1. Builds the correlation headers (`x-request-id`, `x-session-id`) from the request context that `withRequestContext` put in AsyncLocalStorage. Empty outside a request context — see Cached reads.
+2. Resolves the session cookie when `withAuth` is true, and merges it with the correlation headers.
+3. Emits `gateway.request.started` (**debug**) — booleans only: `withAuth`, `hasSession`, `hasCorrelation`. Never the cookie value, never the ids.
+4. Emits `gateway.call.dispatched` (**trace**, development) — header _names_ only, so you can confirm what was attached without the values ever reaching a log sink.
+5. Invokes the gateway's callback with those headers, then puts the raw result through `normalizeServiceResponse` to get a `ServiceResult`.
+6. Emits `gateway.call.completed` (**trace**) — `ok`, status, duration, `hasData`. Brackets step 4 so a call is visible even when it never returns.
+7. Emits the one durable lifecycle line, at a severity keyed to the outcome, with the backend's `x-trace-id` folded in when the response carried one.
+
+| Outcome                                                         | Level   | Event                         |
+| --------------------------------------------------------------- | ------- | ----------------------------- |
+| `ok: true`                                                      | `info`  | `gateway.response.successful` |
+| Status ≥ 500, including the synthetic 503 for a network failure | `fatal` | `gateway.request.failed`      |
+| 400 or 429                                                      | `error` | `gateway.request.failed`      |
+| Any other failure (401, 403, 404, 409, 422…)                    | `warn`  | `gateway.request.failed`      |
+
+Why a ladder rather than one level: an expected rejection is not an incident. A 401 or a 404 is the system working. A 5xx or an unreachable backend is an outage. A 400 sits between them and means _we_ sent something the backend refused — since actions re-validate before calling, that is a frontend bug worth surfacing — and a 429 means something is hammering a limit. The levels are the alerting policy, written where the call happens.
+
+Failure logs carry a **sanitized** error, never the raw payload: `sanitizeGatewayError` lifts only `code` and `message` off the backend envelope. Backend errors can embed submitted emails, validation detail, or tokens, and the structured log stream must never become a PII sink.
+
+The backend's trace id is read off the response header (`readBackendTraceId`) and attached to the gateway's own log line, which is what makes a Next-server log line and a backend trace joinable from one search.
+
+### The `ServiceResult` envelope
 
 ```typescript
 export type ServiceResult<T, E = unknown> =
@@ -170,16 +212,49 @@ export type ServiceResult<T, E = unknown> =
   | { ok: false; status: number; message: string; error: E; response: Response | undefined };
 ```
 
-Why an envelope instead of exceptions: callers are forced to handle the failure branch at the call site — there is no forgotten `try/catch`, and a network failure (`status: 503`, no response) is handled by the same code as an HTTP 4xx.
+Why an envelope instead of exceptions: callers are forced to handle the failure branch at the call site — there is no forgotten `try/catch` — and a network failure (normalized to `status: 503` with no response) is handled by the same code as an HTTP 4xx. There is exactly one failure channel.
+
+Callers branch on the envelope, not on strings. Status is the common axis (`loginAction` maps 429 → "too many attempts", ≥ 500 → generic error, everything else → a deliberately vague "invalid email or password"). When the branch depends on _which_ backend error it was, `errorCode(result.error)` (`lib/gateway/error-code.ts`) pulls the stable code out of the uniform `HttpExceptionFilter` envelope — branch on that code, never on `message`, which is user-facing copy and free to change.
+
+### Handling the data
+
+A gateway function returns one of two shapes, and choosing between them is the real design decision in the layer:
+
+- **Pass the envelope through** — `getDashboard`, `login`, `register`, `logout` return `ServiceResult<T, E>`. Use this when callers must distinguish _how_ the call failed, or need the raw `Response` (`loginAction` reads `set-cookie` off it).
+- **Unwrap to a domain value** — `getCurrentUserForSession` returns `AccountDto | null`. Use this when every caller wants the same answer and none can act on the difference between failure modes. To a session guard, "no cookie", "revoked session", and "backend down" all mean the same thing: not authenticated, fail closed.
+
+Unwrapping is where the gateway earns its place: it is the point at which the backend's _maybe_ becomes the app's type. `parseCurrentUser` in `users.ts` is the worked example — a response that is `ok: true` but carries no `account` is contract drift, so it logs `user.current.account_missing` and returns `null` rather than letting a null-deref surface three layers up in a component. Validate the shape you claim to return; do not assert it.
+
+What a gateway must **not** do: feature logic, user-facing copy, redirects, or deciding what a status _means to the member_. A gateway that maps 409 to "that email is already taken" has taken the server action's job — and the next caller inherits a decision it never made.
+
+### `withAuth`, and the two reasons to turn it off
+
+`withAuth` defaults to **true**: the wrapper resolves the session cookie and attaches it. Turning it off has two distinct meanings, and they are not interchangeable:
+
+- **The endpoint is genuinely public** — `register`, `login`. There is no session yet.
+- **The caller supplies the session itself** — the cached path. `getCurrentUserForSessionValue` builds the header with `buildSessionCookieHeader(session)` and passes `{ withAuth: false }` so the wrapper does not reach for `cookies()`. This is still an authenticated call; `withAuth: false` only says _the wrapper is not the one resolving the session_.
+
+So `withAuth: false` is not by itself "this call goes out unauthenticated" — reading it means checking which of the two cases applies, and the second must pass a cookie header of its own. Correlation headers are forwarded either way; they are not session material.
 
 ### Cached reads
 
 Read gateways that serve many renders use the Next cache, with the repo's named knobs rather than ad-hoc numbers:
 
 - `'use cache'` on the cached function, `cacheLife(cacheLifeProfiles.<profile>)` from `lib/cache/life.ts`, and `cacheTag(cacheTags.<entity>(id))` from `lib/cache/tags.ts` so mutations can invalidate precisely.
-- Session-scoped reads compose `withSessionCache` (`lib/cache/utils.ts`), which resolves the session cookie outside the cache boundary and passes it in as an argument — request-scoped APIs (cookies, AsyncLocalStorage) do not exist inside `'use cache'`. Cached reads are therefore correlation-blind by design; that trade is accepted for the cache hit.
+- Session-scoped reads compose `withSessionCache` (`lib/cache/utils.ts`), which resolves the session cookie outside the cache boundary and passes it in as an argument — request-scoped APIs (cookies, AsyncLocalStorage) do not exist inside `'use cache'`. This is why the cached path uses `withAuth: false` with an explicit cookie header, and why cached reads are correlation-blind by design; that trade is accepted for the cache hit.
+- **Auth checks never read from a cache.** `validateSession` goes through the uncached path with `cache: 'no-store'` so a revoked session cannot be papered over by a warm entry; `React.cache` dedupes it within a single render, nothing more. The cached read exists for _display_ (`getCurrentUserCached`), never for a decision.
 
 `getCurrentUserCached` in `lib/gateway/users.ts` is the worked example of the whole pattern.
+
+### Escape hatches
+
+`gateway-wrapper.ts` exports three helpers for calls that cannot take the standard path, all so an unusual call still gets _part_ of the standard treatment — never so it can skip the wrapper:
+
+| Helper                              | For                                                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `buildSessionCookieHeader(session)` | Building the cookie header from a session held as a value rather than read from the request (cached path) |
+| `withCorrelation(options)`          | Merging correlation headers into a generated-client options object outside the wrapper's callback         |
+| `readBackendTraceId(response)`      | Reading the backend's `x-trace-id` off a response for a log line of your own                              |
 
 ### The generated clients
 
@@ -284,6 +359,7 @@ Frontend work is complete when all of these hold:
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Mutations re-validate input server-side with the strict action schema        | Server Actions; Forms and Validation                               |
 | Backend calls go through a gateway; actions through `actionWrapper`          | The Data Path                                                      |
+| Every gateway result's `ok: false` branch is handled at the call site        | Gateways                                                           |
 | New log events registered in `FRONTEND_LOG_EVENTS`; nothing sensitive logged | Logging and Observability                                          |
 | New env vars declared in `config/env.schema.ts`                              | Configuration and Environment                                      |
 | UI composed per the component standards above                                | Build on `@repo/ui`; The Three Tiers                               |
