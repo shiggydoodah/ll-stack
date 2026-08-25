@@ -1,33 +1,36 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Read(*)",
-      "Write(*)",
-      "Update(*)",
+      "Read(./**)",
       "Bash(ls:*)",
-      "Bash(mkdir:*)",
-      "Bash(mv:*)",
-      "Bash(touch:*)",
-      "Bash(chmod:*)",
-      "Bash(echo:*)",
-      "Bash(sed:*)",
+      "Bash(cat:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
+      "Bash(wc:*)",
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(find:*)",
-      "Bash(source:*)",
-      "Bash(git:*)",
-      "Bash(gh pr *)",
-      "Bash(npm:*)",
-      "Bash(npx:*)",
-      "Bash(pnpm:*)",
-      "Bash(docker:*)",
-      "Bash(curl:*)",
-      "Bash(lsof:*)",
-      "Bash(pkill:*)"
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm build)",
+      "Bash(pnpm test)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm verify)",
+      "Bash(pnpm verify:backend)",
+      "Bash(pnpm verify:frontend)",
+      "Bash(pnpm verify:ui)"
     ],
-    "deny": []
-  },
-  "enabledPlugins": {}
+    "deny": [
+      "Read(./**/.env)",
+      "Read(./**/.env.local)",
+      "Read(./**/.env.test)",
+      "Read(./.secrets/**)"
+    ]
+  }
 }

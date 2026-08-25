@@ -14,9 +14,4 @@ export {
   usernameSchema,
   type Username,
 } from './username';
-export {
-  BASE64_TOKEN_BYTE_LENGTH,
-  BASE64_TOKEN_LENGTH,
-  base64TokenSchema,
-  type Base64Token,
-} from './token';
+export { base64TokenLength, createBase64TokenSchema, type Base64Token } from './token';

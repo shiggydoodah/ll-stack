@@ -1,17 +1,27 @@
 # LL Stack
 
-A production-minded full-stack TypeScript boilerplate: a pnpm-workspace monorepo powered by Turborepo, with a NestJS backend, two Next.js apps, Postgres + Prisma, end-to-end typed API clients generated from OpenAPI, structured logging with OpenTelemetry, and Playwright E2E — plus the engineering charters and agent runbooks that keep it all consistent.
+[![CI](https://github.com/shiggydoodah/ll-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/shiggydoodah/ll-stack/actions/workflows/ci.yml)
 
-> **Status:** the platform foundation is in place — monorepo tooling, observability, database standards, generated clients, shared UI kit, and the full verify pipeline. The backend currently ships a health module; auth (signup/login, sessions) lands in the next phase.
+A production-minded full-stack TypeScript boilerplate: a pnpm-workspace monorepo powered by Turborepo, with a NestJS backend, a Next.js member-facing frontend, Postgres + Prisma, end-to-end typed API clients generated from OpenAPI, structured logging with OpenTelemetry, and Playwright E2E — plus the engineering charters and agent runbooks that keep it all consistent.
+
+> **Status:** the platform foundation is in place — monorepo tooling, observability,
+> database standards, generated clients, shared UI kit, and the full verify pipeline —
+> and one vertical slice is built end to end on top of it: signup, login, cookie-backed
+> sessions, and an authenticated dashboard read, wired through the frontend's server
+> actions and the generated clients. That slice exists to be the worked example the
+> charters and runbooks refer to. Email verification, password reset, and the rest of a
+> real product are yours to build; the charters describe the shape they should take.
 
 ## What's in the box
 
 - **Monorepo** — pnpm workspaces + Turborepo task graph, shared TypeScript config presets, one `pnpm verify` ladder for everything.
 - **Backend** — NestJS 11 on Express, Prisma + PostgreSQL, class-validator DTOs, zod-validated env config, `@nestjs/throttler` rate limiting, Swagger/OpenAPI served at `/docs` in development (off elsewhere unless `OPENAPI_DOCS_ENABLED=true`, which puts it behind `ADMIN_API_KEY`).
-- **Typed clients, generated** — the backend OpenAPI document is extracted and code-generated (via `@hey-api/openapi-ts`) into `packages/services`, so the frontends consume a typed contract instead of hand-rolled fetch calls. A drift check fails the build when the contract and the committed client disagree.
+- **Typed clients, generated** — the backend OpenAPI document is extracted and code-generated (via `@hey-api/openapi-ts`) into `packages/services`, so the frontend consumes a typed contract instead of hand-rolled fetch calls. A drift check fails the build when the contract and the committed client disagree.
 - **Frontend** — Next.js (App Router) member-facing app, composed from the shared `@repo/ui` component library (Tailwind v4, token-driven theming, Radix-backed primitives).
+- **Auth, as a worked example** — email/password signup and login, Argon2id hashing, cookie-backed sessions with a background prune, a `SessionGuard`-protected dashboard read, and the layout-based route guards on the frontend. Built to be read and copied, not to be a finished identity system.
 - **Observability** — structured logging with `nestjs-pino`, shared redaction helpers in `@repo/logging`, OpenTelemetry traces and metrics, and a Seq log sink running in Docker for local log search.
 - **Testing** — Jest unit + real-database integration tests on the backend, Vitest in the packages, and a Playwright E2E workspace.
+- **CI** — GitHub Actions runs the same `pnpm verify` ladder you run locally, against a real Postgres service, plus the Playwright suite. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 - **Docs-driven engineering** — charters (the _why_) and agent runbooks (the _rules_) covering backend, frontend, database, dependency, commit, and PR standards. See [How the docs work](#how-the-docs-work).
 
 ## Repo layout
@@ -89,6 +99,18 @@ pnpm verify:ui               # UI package + its consumers
 pnpm test:e2e                # Playwright E2E
 pnpm gen:client              # regenerate OpenAPI service clients
 ```
+
+### In CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main` and
+every pull request. It stands up a Postgres 16 service on the same port
+`docker-compose.yml` uses, copies each app's `.env.example` into place exactly as
+`pnpm setup` does, applies the migrations, then runs `pnpm format:check` and the same
+`pnpm verify` you run locally. A second job installs Chromium and runs `pnpm test:e2e`,
+uploading the Playwright report as a build artifact.
+
+There is no CI-only build path: if it passes on your machine it passes here, and a
+`.env.example` that drifts out of the shape its env schema accepts fails the run.
 
 ## How the docs work
 

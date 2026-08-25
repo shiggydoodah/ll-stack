@@ -154,7 +154,7 @@ docs/
   features/      # Per-feature epics: PLAN/PRD/TECH_SPEC + numbered steps (created as you build)
 
 scripts/         # Repo maintenance scripts
-.github/         # PR templates and review instructions
+.github/         # CI workflows, PR templates, and review instructions
 ```
 
 Rules:
@@ -227,6 +227,8 @@ All code must be production-aware, maintainable, and easy to review & read.
 The repo provides a `pnpm verify` command as the default full validation check.
 
 Agents may run targeted checks during implementation for faster feedback, but after non-trivial changes they must run `pnpm verify` unless the change is documentation/reference-only.
+
+`.github/workflows/ci.yml` runs the same ladder (plus `pnpm format:check` and `pnpm test:e2e`) on every push to `main` and every pull request. It is a backstop, not a substitute: CI runs no command you cannot run locally, so a red build means the local run was skipped, not that CI is different.
 
 Available root commands:
 

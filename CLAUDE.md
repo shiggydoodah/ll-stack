@@ -5,14 +5,14 @@ Follow the repository instructions in `AGENTS.md`.
 ## About This Repo
 
 LL Stack is a full-stack TypeScript boilerplate: a pnpm + Turborepo monorepo
-with a NestJS backend, a Next.js member-facing frontend, a Next.js admin
-dashboard, a Playwright E2E workspace, and shared packages for config, logging,
-schemas, generated API clients, UI, and utilities. It is a foundation to build
-products on, not a product itself — when a task needs product intent (scope,
-phasing, whether a feature should exist), ask the user. The backend ships the
-health module, the platform infrastructure, and the auth/users/dashboard
-modules (signup, login, sessions, and the example authenticated dashboard
-read) that the docs use as worked examples.
+with a NestJS backend, a Next.js member-facing frontend, a Playwright E2E
+workspace, and shared packages for config, logging, schemas, generated API
+clients, UI, and utilities. It is a foundation to build products on, not a
+product itself — when a task needs product intent (scope, phasing, whether a
+feature should exist), ask the user. The backend ships the health module, the
+platform infrastructure, and the auth/users/dashboard modules (signup, login,
+sessions, and the example authenticated dashboard read) that the docs use as
+worked examples.
 
 ## Codebase Context
 

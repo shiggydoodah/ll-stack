@@ -1,9 +1,22 @@
 import { z } from 'zod';
-// FIXUP: the 32 byte length is specific to the email verification token, but this should be an ENUM returned from the DB or a constant import somewhere. Either way this sshould not be hardcoded here. We need to turn it into a function.
-export const BASE64_TOKEN_BYTE_LENGTH = 32;
-export const BASE64_TOKEN_LENGTH = Math.ceil((BASE64_TOKEN_BYTE_LENGTH * 4) / 3);
+
+/**
+ * Character length of the unpadded base64url encoding of `byteLength` random
+ * bytes — what `randomBytes(byteLength).toString('base64url')` emits.
+ */
+export const base64TokenLength = (byteLength: number): number => Math.ceil((byteLength * 4) / 3);
+
 const tokenError = 'Enter a valid token';
 
-export const base64TokenSchema = z.base64url(tokenError).length(BASE64_TOKEN_LENGTH, tokenError);
+/**
+ * Validator for an opaque base64url token of a fixed byte length.
+ *
+ * The byte length is a parameter rather than a constant because it belongs to
+ * whichever feature issues the token — an email verification token and a
+ * password reset token need not agree on it, and only the issuer knows what it
+ * generates. This package owns the encoding rules; the caller owns the size.
+ */
+export const createBase64TokenSchema = (byteLength: number) =>
+  z.base64url(tokenError).length(base64TokenLength(byteLength), tokenError);
 
-export type Base64Token = z.infer<typeof base64TokenSchema>;
+export type Base64Token = z.infer<ReturnType<typeof createBase64TokenSchema>>;

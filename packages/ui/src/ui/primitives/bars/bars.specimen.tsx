@@ -10,7 +10,7 @@ type BarsDemoProps = {
 // ── Sample data (ui-lab only) ────────────────────────────────────────────────────
 
 // A deterministic 30-value "daily counts" series with visible shape (weekly-ish wave
-// plus a ramp), mirroring the per-day stats the admin dashboard plots.
+// plus a ramp), the shape a per-day activity stat tends to have.
 const MONTH_SERIES = Array.from({ length: 30 }, (_, i) => {
   const value = Math.round(6 + 5 * Math.sin(i / 2.2) + i / 4 + (i % 5));
   return { value, title: `2026-06-${String(i + 1).padStart(2, '0')}: ${value}` };

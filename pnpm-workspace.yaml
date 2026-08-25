@@ -517,7 +517,7 @@ overrides:
   # module scope (their short-lived SlotContext/PropsProvider). React's `react-server`
   # build omits createContext, so any Server Component graph that transitively imports
   # react-slot throws "createContext is not a function" during Next's page-data
-  # collection (hit here via @repo/ui primitives in the admin-dashboard app).
+  # collection (hit here via @repo/ui primitives in the frontend app).
   # 1.3.3 removed that call while keeping the createSlot export react-primitive needs.
   # react-primitive 2.1.8 and react-dialog/react-popover/react-collection all hard-pin
   # react-slot to EXACT 1.3.1, so the catalog floor above cannot dislodge them — this

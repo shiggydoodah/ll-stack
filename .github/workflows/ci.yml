@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Superseded PR runs are cancelled; pushes to main always run to completion so
+# every commit on the default branch has a verdict.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Mirrors the postgres service in docker-compose.yml, port included, so the
+    # database URLs committed in .env.example and in the test helpers' defaults
+    # work here unchanged.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: llstack_dev
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d llstack_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Same copy `pnpm setup` performs. `next build` reads its env at import
+      # time, so the frontend cannot build without one; doing it from the
+      # committed examples also means CI fails if an example ever drifts out of
+      # the shape its env schema accepts.
+      - name: Create env files from the committed examples
+        run: |
+          cp apps/backend/.env.example apps/backend/.env
+          cp apps/frontend/.env.example apps/frontend/.env
+
+      # docker-compose.yml creates this via scripts/postgres-init; a GitHub
+      # service container cannot mount that script, so create it here instead.
+      - name: Create the test database
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -p 5433 -U postgres -d postgres -c 'CREATE DATABASE llstack_test'
+
+      - name: Apply migrations to both databases
+        run: pnpm migrate
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      # prisma-lint + lint + build + boot smokes + client-drift + typecheck + test.
+      - name: Verify
+        run: pnpm verify
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: llstack_dev
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d llstack_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The Playwright harness boots the backend and frontend itself with its
+      # own pinned env (apps/testing/playwright.config.ts), so only the test
+      # database has to exist first.
+      - name: Create the test database
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -p 5433 -U postgres -d postgres -c 'CREATE DATABASE llstack_test'
+
+      - name: Apply migrations to both databases
+        run: pnpm migrate
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @repo/testing exec playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: pnpm test:e2e
+
+      - name: Upload the Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: apps/testing/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
