@@ -97,6 +97,17 @@ describe('proxy', () => {
     expect(response.cookies.get('bind_dev')?.value).toEqual(expect.any(String));
   });
 
+  it('forwards the CSP on the request headers so Next nonces request-time inline scripts', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+
+    const response = proxy(makeRequest());
+
+    // Next reads the render nonce from the request's CSP header, not the response's.
+    const forwardedCsp = response.headers.get('x-middleware-request-content-security-policy');
+    expect(forwardedCsp).toBe(response.headers.get('Content-Security-Policy'));
+    expect(forwardedCsp).toMatch(/'nonce-[A-Za-z0-9+/=]+'/);
+  });
+
   it('propagates the correlation and session ids on the forwarded request headers', () => {
     const response = proxy(makeRequest('/', { [CORRELATION_ID_HEADER]: 'not-valid!' }));
 

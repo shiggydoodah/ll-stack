@@ -146,6 +146,11 @@ export const proxy = (request: NextRequest): NextResponse => {
 
   const forwardedHeaders = (): Headers => {
     const requestHeaders = new Headers(request.headers);
+    // Next extracts the render nonce from the REQUEST's Content-Security-Policy
+    // header (the response header is never consulted during rendering), so the
+    // forwarded request must carry the exact same CSP — without it, request-time
+    // inline scripts are emitted un-nonced and blocked by the response policy.
+    requestHeaders.set('content-security-policy', csp);
     requestHeaders.set('x-nonce', nonce);
     requestHeaders.set(CORRELATION_ID_HEADER, correlationId);
     requestHeaders.set(SESSION_ID_HEADER, sessionId);

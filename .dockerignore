@@ -1,0 +1,21 @@
+# Keep local installs, build output, VCS state, and secrets out of every image
+# build context: host node_modules would clobber the in-container install
+# (darwin binaries over linux), and .env files must never reach image layers —
+# `pnpm deploy` in apps/backend/Dockerfile copies the whole project directory
+# into the final runner stage, so anything admitted here can ship in the image.
+**/node_modules
+.git
+**/.env
+**/.env.*
+!**/.env.example
+!apps/testing/.env.test.example
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+playwright-report
+test-results
+blob-report
+.temp
+.claude

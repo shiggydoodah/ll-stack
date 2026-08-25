@@ -4,6 +4,14 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: path.join(__dirname, '../../'),
+  // Next 16.3.1's standalone trace copies only @swc/helpers' cjs/ files, but
+  // the server's require-hook resolves the package's `esm/` export targets at
+  // boot — so the pruned store ships without them and `node server.js` dies
+  // with MODULE_NOT_FOUND on @swc/helpers/esm/_interop_require_default.js.
+  // Force the whole package into the trace until the tracer catches up.
+  outputFileTracingIncludes: {
+    '/**': ['../../node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers/**'],
+  },
   transpilePackages: ['@repo/ui', '@repo/services', '@repo/logging'],
   reactStrictMode: true,
   cacheComponents: true,
