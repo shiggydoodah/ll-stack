@@ -1,0 +1,49 @@
+:where(*, *::before, *::after) {
+  box-sizing: border-box;
+}
+
+:where(html) {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+:where(body, h1, h2, h3, h4, p, figure, blockquote, dl, dd) {
+  margin: 0;
+}
+
+:where(ul[role='list'], ol[role='list']) {
+  list-style: none;
+}
+
+:where(button, input, textarea, select) {
+  font: inherit;
+}
+
+:where(button:enabled) {
+  cursor: pointer;
+}
+
+:where(img, picture, canvas, video) {
+  display: block;
+  max-width: 100%;
+}
+
+/* Link colour belongs in base, component, or app styles. */
+
+/*
+ * Reduced-motion clamp. `!important` in the first cascade layer beats every
+ * later layer, so this neutralizes ALL animation utilities — Tailwind's
+ * animate-spin/animate-ping/animate-bounce (LoadingDots) and the library's
+ * ui-shake/ui-progress-indeterminate keyframes alike. `animation-delay` is
+ * clamped too: staggered animations (e.g. bounce-delayed loading dots) must
+ * not fire delayed single-frame flashes.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :where(*, *::before, *::after) {
+    animation-delay: 0s !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

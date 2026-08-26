@@ -1,0 +1,10 @@
+{
+  "extends": "../../packages/config/tsconfig.nestjs.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

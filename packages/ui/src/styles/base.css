@@ -1,0 +1,258 @@
+@property --focus-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ui-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-5px);
+  }
+  30% {
+    transform: translateX(5px);
+  }
+  45% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
+
+@keyframes ui-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes ui-focus-spin {
+  to {
+    --focus-angle: 360deg;
+  }
+}
+
+@keyframes ui-focus-glow {
+  from {
+    box-shadow:
+      0 0 0 1px var(--ui-focus-ring-background),
+      0 0 8px 2px color-mix(in srgb, var(--ui-focus-ring) 14%, transparent);
+  }
+  to {
+    box-shadow:
+      0 0 0 1px var(--ui-focus-ring-background),
+      0 0 14px 4px color-mix(in srgb, var(--ui-focus-ring) 24%, transparent);
+  }
+}
+
+.ui-btn:focus-visible {
+  outline: none;
+  animation: ui-focus-glow 2s ease-in-out infinite alternate;
+}
+
+.ui-btn:focus-visible::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--focus-angle),
+    transparent 0%,
+    color-mix(in srgb, var(--ui-focus-ring) 20%, transparent) 4%,
+    color-mix(in srgb, var(--ui-focus-ring) 65%, transparent) 18%,
+    color-mix(in srgb, var(--ui-focus-ring) 65%, transparent) 60%,
+    color-mix(in srgb, var(--ui-focus-ring) 20%, transparent) 74%,
+    transparent 80%
+  );
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ui-focus-spin 4.5s linear infinite;
+  pointer-events: none;
+}
+
+@media (forced-colors: active) {
+  .ui-btn:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .ui-btn:focus-visible::before {
+    content: none;
+    display: none;
+    background: none;
+    -webkit-mask: none;
+    mask: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn:focus-visible {
+    animation: none;
+    box-shadow:
+      0 0 0 1px var(--ui-focus-ring-background),
+      0 0 0 2.5px color-mix(in srgb, var(--ui-focus-ring) 60%, transparent);
+  }
+
+  .ui-btn:focus-visible::before {
+    animation: none;
+    background: color-mix(in srgb, var(--ui-focus-ring) 60%, transparent);
+  }
+}
+
+/*
+ * Fields glow like buttons but must NOT reuse `ui-focus-glow`: that keyframe's
+ * crisp `0 0 0 1px --ui-focus-ring-background` hairline is a *backing* layer,
+ * there to separate `.ui-btn` from the spinning conic ring it draws in
+ * `::before`. A field has no such ring, so the backing became the whole
+ * indicator — a stray white outline around the control. Here the field's own
+ * border carries the crisp edge (see `focus-visible:border-(--ui-focus-ring)`
+ * in the input/select/textarea styles) and the box-shadow is bloom only.
+ */
+@keyframes ui-field-focus-glow {
+  from {
+    box-shadow: 0 0 6px 1px color-mix(in srgb, var(--ui-focus-ring) 18%, transparent);
+  }
+  to {
+    box-shadow: 0 0 12px 3px color-mix(in srgb, var(--ui-focus-ring) 30%, transparent);
+  }
+}
+
+.ui-field:focus-visible {
+  outline: none;
+  animation: ui-field-focus-glow 2s ease-in-out infinite alternate;
+}
+
+@media (forced-colors: active) {
+  .ui-field:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-field:focus-visible {
+    animation: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-focus-ring) 45%, transparent);
+  }
+}
+
+/*
+ * Theme hooks — keyword properties (border-style, text-transform,
+ * letter-spacing) cannot be var-driven Tailwind utilities, so they are applied
+ * here against the stable .ui-* class hooks and read the theme tokens
+ * directly. Themes with structural needs beyond tokens target the same hooks
+ * from their custom.css.
+ */
+.ui-btn,
+.ui-badge,
+.ui-card,
+.ui-field,
+.ui-callout,
+.ui-banner,
+.ui-dialog,
+.ui-popover,
+.ui-drawer,
+.ui-toast,
+.ui-dropdown {
+  border-style: var(--ui-border-style, solid);
+}
+
+/*
+ * Display-text chrome: buttons, badges, tab triggers, table headers, field
+ * labels. Components opt in with the .ui-display-text class; a theme's
+ * config decides whether the library shouts (carbon's uppercase + tracking) or
+ * speaks sentence case (riso).
+ */
+.ui-display-text {
+  text-transform: var(--ui-display-case, none);
+  letter-spacing: var(--ui-display-tracking, normal);
+}
+
+html {
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  background: var(--ui-background);
+  color: var(--ui-foreground);
+  overflow-x: clip;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--ui-font-body);
+  font-synthesis: none;
+  min-height: 100dvh;
+  font-weight: 400;
+  line-height: 1.56;
+}
+
+/*
+ * A theme root re-establishes the body font for its subtree. Without this,
+ * placing data-theme below <body> (theme islands, or an app shell div) would
+ * leave plain text on the computed font of the unthemed body.
+ */
+[data-theme] {
+  font-family: var(--ui-font-body);
+}
+
+/*
+ * Theme/mode islands must also re-establish text colour, in BOTH directions:
+ * `color` inherits, so a dark island inside a light page would otherwise keep
+ * the page's near-black text (and vice versa). The island's own
+ * --ui-foreground is re-read here so its subtree gets the island's colour.
+ */
+[data-theme],
+[data-mode] {
+  color: var(--ui-foreground);
+}
+
+::selection {
+  background: var(--ui-accent-hover);
+  color: var(--ui-background);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--ui-font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+}
+
+em {
+  color: var(--ui-accent);
+  font-style: inherit;
+}
+
+a {
+  color: var(--ui-accent);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+  font-style: inherit;
+}
+
+a:hover {
+  color: var(--ui-accent-hover);
+}

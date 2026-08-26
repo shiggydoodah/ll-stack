@@ -1,0 +1,22 @@
+{
+  "name": "@repo/config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig.base.json",
+    "./tsconfig/nestjs.json": "./tsconfig.nestjs.json",
+    "./tsconfig/nextjs.json": "./tsconfig.nextjs.json",
+    "./tsconfig/package-build.json": "./tsconfig.package-build.json",
+    "./prettier.config": "./prettier.config.cjs",
+    "./tsconfig/react-library.json": "./tsconfig.react-library.json"
+  },
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.nestjs.json",
+    "tsconfig.nextjs.json",
+    "tsconfig.package-build.json",
+    "prettier.config.cjs",
+    "tsconfig.react-library.json"
+  ]
+}

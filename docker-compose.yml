@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    # Local-only durability trade: commits stop waiting for the WAL flush, so
+    # the backend integration suite's per-test cleanup/reseed writes (and dev
+    # seeds) stop paying fsync latency. fsync itself stays on — a postgres
+    # crash cannot corrupt data; only an abrupt VM/host power loss can drop the
+    # last moments of commits, which is an acceptable worst case for
+    # throwaway dev/test databases. Remove before any non-local deployment.
+    command: postgres -c synchronous_commit=off
+    environment:
+      POSTGRES_DB: llstack_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d llstack_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  seq:
+    image: datalust/seq:2024.1
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: Y
+      SEQ_FIRSTRUN_NOAUTHENTICATION: true # local dev only — prevents Seq restarting in an auth-setup loop on first run; remove before any non-local deployment
+    ports:
+      - '5342:5341'
+      - '8087:80'
+    volumes:
+      - seq-data:/data
+
+volumes:
+  postgres-data:
+  seq-data:

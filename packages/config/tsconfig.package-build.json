@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Shared build preset for the plain workspace packages (schema, utils):
+  // emit CommonJS to dist/ for Node consumers - the backend require()s these
+  // packages from their dist/ at boot. Each package's dev tsconfig uses
+  // "ESNext"/"bundler" for editor + vitest/bundler use only and never emits.
+  //
+  // `"module": "node20"` replaces the removed-in-TS7 node10 pair (`"module":
+  // "CommonJS"` + `"moduleResolution": "node"`); the packages declare no
+  // `"type"`, so sources stay CommonJS-format and the emit is unchanged. See
+  // `packages/config/tsconfig.nestjs.json` for the full node20 rationale.
+  //
+  // Consume via array extends with this preset LAST so it wins over the dev
+  // config's "bundler":
+  //   "extends": ["./tsconfig.json", "@repo/config/tsconfig/package-build.json"]
+  "compilerOptions": {
+    "module": "node20",
+    // The dev tsconfigs set "bundler", which is illegal with module node20 and
+    // cannot be un-inherited. "node16" is the value tsc requires here (TS5109
+    // rejects the inherited "bundler"), and it is what `"module": "node20"`
+    // resolves to implicitly - so this override is a no-op, not a downgrade.
+    // Not "nodenext": tsc accepts it, but it floats with future TypeScript
+    // releases where node20 is version-pinned. The two module modes differ in
+    // `module` semantics (require(esm)), not resolution mechanics.
+    "moduleResolution": "node16",
+    // ${configDir} = the directory of the EXTENDING tsconfig, so these point
+    // at each package's own src/dist, not this preset's.
+    "rootDir": "${configDir}/src",
+    "outDir": "${configDir}/dist",
+    "declaration": true,
+    "incremental": false,
+    "noEmit": false
+  }
+}

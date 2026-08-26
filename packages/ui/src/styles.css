@@ -1,0 +1,46 @@
+@layer reset, tokens, base, components, utilities;
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@source './';
+
+@import './styles/index.css';
+
+/* Tailwind extensions */
+@theme {
+  --animate-shake: ui-shake 0.5s ease-in-out;
+  --animate-progress-indeterminate: ui-progress-indeterminate 1.5s ease-in-out infinite;
+
+  --text-4xs: 0.5rem; /* 8px */
+  --text-3xs: 0.625rem; /* 10px */
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-s: var(--text-sm); /* 14px */
+}
+
+/*
+ * Token bridge — `inline` is load-bearing: the var() is substituted into each
+ * generated utility, so it resolves at the element that USES the class. That
+ * is what lets a [data-theme] island re-map tone colours and fonts for its
+ * subtree; a non-inline bridge would resolve once at :root and ignore islands.
+ * Opacity modifiers keep working: `bg-tone-red/20` compiles to
+ * color-mix(in oklab, var(--ui-tone-red) 20%, transparent).
+ */
+@theme inline {
+  --font-body: var(--ui-font-body);
+  --font-display: var(--ui-font-display);
+  --font-mono: var(--ui-font-mono);
+
+  --color-tone-red: var(--ui-tone-red);
+  --color-tone-red-contrast: var(--ui-tone-red-contrast);
+  --color-tone-green: var(--ui-tone-green);
+  --color-tone-green-contrast: var(--ui-tone-green-contrast);
+  --color-tone-amber: var(--ui-tone-amber);
+  --color-tone-amber-contrast: var(--ui-tone-amber-contrast);
+  --color-tone-blue: var(--ui-tone-blue);
+  --color-tone-blue-contrast: var(--ui-tone-blue-contrast);
+  --color-tone-purple: var(--ui-tone-purple);
+  --color-tone-purple-contrast: var(--ui-tone-purple-contrast);
+  --color-tone-magenta: var(--ui-tone-magenta);
+  --color-tone-magenta-contrast: var(--ui-tone-magenta-contrast);
+}

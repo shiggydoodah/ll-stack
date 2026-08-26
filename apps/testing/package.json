@@ -1,0 +1,27 @@
+{
+  "name": "@repo/testing",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "//test:e2e": "Two sequential runs, one stack at a time. The second pins the backend to a ten-second rotation interval for auth-session-rotation.spec.ts, which is the only spec that needs one; playwright.config.ts explains why that cannot be a project. BOTH RUNS ALWAYS EXECUTE, hence `;` and the exit-code check rather than `&&`: chaining them meant one unrelated failure in the default run skipped the rotation run entirely, and that run is the only place the real middleware rotation chain is ever loaded. The last command is the gate, so the script fails when either run did.",
+    "test:e2e": "playwright test; first=$?; E2E_ROTATION=1 playwright test; second=$?; [ $first -eq 0 ] && [ $second -eq 0 ]",
+    "test:e2e:rotation": "E2E_ROTATION=1 playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "clean": "rm -rf playwright-report test-results .turbo"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "@repo/config": "workspace:*",
+    "@types/node": "^24.13.3",
+    "@typescript/native": "catalog:",
+    "dotenv": "^17.4.2",
+    "prisma": "catalog:",
+    "typescript": "catalog:"
+  }
+}

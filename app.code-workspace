@@ -1,0 +1,63 @@
+{
+    "folders": [
+        {
+            "name": "🗂️ Root",
+            "path": "."
+        },
+        {
+            "name": "🖥️ Backend",
+            "path": "apps/backend"
+        },
+        {
+            "name": "💻 Frontend",
+            "path": "apps/frontend"
+        },
+        {
+            "name": "🎭 Playwright",
+            "path": "apps/testing/tests"
+        },
+        {
+            "name": "🎨 UI Library",
+            "path": "packages/ui/src"
+        },
+        {
+            "name": "🔧 Services",
+            "path": "packages/services/src"
+        },
+        {
+            "name": "📦 Packages",
+            "path": "packages"
+        },
+        {
+            "name": "📚 Docs",
+            "path": "docs/"
+        }
+    ],
+    "settings": {
+        "search.useIgnoreFiles": true,
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/dist": true,
+            "**/build": true,
+            "**/.next": true,
+            "**/out": true,
+            "**/coverage": true,
+            "**/.turbo": true,
+            "**/*.tsbuildinfo": true,
+            "**/pnpm-lock.yaml": true,
+            "**/*.min.js": true,
+            "**/*.js.map": true,
+            "**/apps/ui-lab/**": true,
+            "**/apps/ui-lab/src/routeTree.gen.ts": true
+        },
+        // --- TypeScript server stability (large monorepo) ---
+        // Default ceiling is 3072 MB; raise it so the server doesn't OOM and
+        // restart into a degraded state where modules stop resolving. 8 GB RAM.
+        "js/ts.tsserver.maxMemory": 8192,
+        // All-TS monorepo with explicit @types deps — ATA is pure churn here.
+        "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
+        // Use the repo's pinned TypeScript (node_modules) rather than the bundle.
+        "js/ts.tsdk.path": "node_modules/typescript/lib",
+        "js/ts.tsdk.promptToUseWorkspaceVersion": true
+    }
+}

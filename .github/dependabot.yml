@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Low-noise dependency policy:
+  # - monitor the pnpm monorepo from the root package manifests
+  # - keep routine version-update PRs disabled
+  # - handle security alert notification/triage in GitHub Dependabot settings
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: '03:00'
+      timezone: UTC
+    # Keep at 0 so Dependabot does not create routine version-update PRs.
+    # Security alerts and any severity-scoped PR behavior are controlled through
+    # GitHub Dependabot alerts/rules, not the version-update schedule.
+    open-pull-requests-limit: 0
+    labels:
+      - dependencies
+      - security
+    commit-message:
+      prefix: 'chore(deps)'

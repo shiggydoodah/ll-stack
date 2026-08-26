@@ -1,0 +1,47 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", ".vinxi/**", ".output/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      // Strict env mode strips undeclared vars from task env. VERIFY_SWEEP
+      // (set by the root `test` script) tells the vitest configs they are part
+      // of the full-repo sweep — one suite at a time, --concurrency=1 — and
+      // should hold their fork pools at the low-spec floor rather than the
+      // wider pool a standalone `pnpm test:frontend` may use; passThroughEnv
+      // deliberately keeps it OUT of the cache hash — pool size changes
+      // scheduling, never output.
+      "passThroughEnv": ["VERIFY_SWEEP"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "env": ["FRONTEND_BASE_URL"],
+      "cache": false,
+      "outputs": ["playwright-report/**", "test-results/**"]
+    },
+    "clean": {
+      "cache": false
+    },
+    "gen": {
+      "cache": false,
+      "outputs": ["src/**"]
+    }
+  }
+}

@@ -1,0 +1,43 @@
+.ui-skeleton {
+  /* --ui-skeleton-bg-* are part of the token contract (tokens.css); themes
+     override them to recolor the shimmer. */
+  background: linear-gradient(
+    90deg,
+    var(--ui-skeleton-bg-start) 0%,
+    var(--ui-skeleton-bg-mid) 50%,
+    var(--ui-skeleton-bg-end) 100%
+  );
+  background-size: 200% 100%;
+  animation: ui-skeleton-shimmer 1.6s infinite;
+}
+
+@keyframes ui-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* FieldError's decorative "!" badge glyph.
+
+   `content: '!' / ''` is the CSS alternative-text syntax — the empty alt text
+   keeps AT from voicing the "!" that sits inside the red circle. It only parses
+   in Safari 17.4+ / Firefox 133+; older engines treat the whole declaration as
+   invalid, `content` falls back to its initial `normal`, and ::before then
+   generates no box at all — losing the badge, not just its announced text.
+
+   So the plain glyph is the floor and the alt-text form is layered on top
+   behind @supports. Everything else about the badge (size, colour, radius)
+   stays in FieldError's utility classes. */
+.ui-field-error::before {
+  content: '!';
+}
+
+@supports (content: 'x' / '') {
+  .ui-field-error::before {
+    content: '!' / '';
+  }
+}

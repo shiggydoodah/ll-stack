@@ -1,0 +1,60 @@
+#!/usr/bin/env sh
+set -eu
+
+protected_refs='refs/heads/main refs/heads/master'
+zero_sha='0000000000000000000000000000000000000000'
+empty_tree_sha='4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+
+is_docs_only_push() {
+  local_sha="$1"
+  remote_sha="$2"
+
+  if [ "$local_sha" = "$zero_sha" ]; then
+    return 1
+  fi
+
+  if [ "$remote_sha" = "$zero_sha" ]; then
+    if ! changed_paths="$(git diff --no-renames --name-only "$empty_tree_sha" "$local_sha")"; then
+      return 1
+    fi
+  elif ! changed_paths="$(git diff --no-renames --name-only "$remote_sha" "$local_sha")"; then
+    return 1
+  fi
+
+  if [ -z "$changed_paths" ]; then
+    return 1
+  fi
+
+  echo "$changed_paths" | while IFS= read -r changed_path; do
+    case "$changed_path" in
+      docs/*) ;;
+      *) exit 1 ;;
+    esac
+  done
+}
+
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+  for protected_ref in $protected_refs; do
+    if [ "$remote_ref" = "$protected_ref" ]; then
+      branch_name="${remote_ref#refs/heads/}"
+      remote_name="${1:-remote}"
+
+      if is_docs_only_push "$local_sha" "$remote_sha"; then
+        echo "Allowing direct push to ${branch_name}: changed paths are all under docs/." >&2
+        continue
+      fi
+
+      echo "Push rejected: direct pushes to ${branch_name} are blocked by the local pre-push hook." >&2
+      echo "Pushes are allowed when every changed path is under docs/." >&2
+      echo "Push a feature branch and open a pull request instead. Use --no-verify only for an intentional emergency bypass." >&2
+      echo "Remote: ${remote_name}" >&2
+      echo "Local ref: ${local_ref}" >&2
+      echo "Local sha: ${local_sha}" >&2
+      echo "Remote ref: ${remote_ref}" >&2
+      echo "Remote sha: ${remote_sha}" >&2
+      exit 1
+    fi
+  done
+done
+
+exit 0

@@ -1,0 +1,21 @@
+{
+  "extends": "../../packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "@playwright/test"],
+    "noEmit": true
+  },
+  "include": [
+    "playwright.config.ts",
+    "playwright.production-csp.config.ts",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "tests-production/**/*.ts"
+  ],
+  "exclude": ["node_modules", "playwright-report", "test-results"]
+}

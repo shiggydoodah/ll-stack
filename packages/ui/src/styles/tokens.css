@@ -1,0 +1,101 @@
+/*
+ * The --ui-* token contract. This file declares every custom property the
+ * components consume, with neutral fallback values that mirror the `default`
+ * theme's light mode — an app that imports only styles.css (no theme) renders
+ * legibly. Theme files (themes/<name>/tokens.gen.css, generated from
+ * theme.json) override these under [data-theme='<name>'] scopes; they are
+ * imported unlayered by the app, so they always beat this @layer tokens block.
+ *
+ * The token NAMES are the frozen public contract between components and
+ * themes. Add tokens deliberately; never rename existing ones.
+ */
+@layer tokens {
+  :root {
+    /* ── Color: surfaces ─────────────────────────────────────────────── */
+    --ui-background: #fafaf9;
+    --ui-background-subtle: #f1f1f0;
+    --ui-background-muted: #e7e7e6;
+    --ui-foreground: #111113;
+    --ui-overlay: rgb(0 0 0 / 0.7); /* modal scrim behind dialogs/drawers */
+
+    /* ── Color: accent ───────────────────────────────────────────────── */
+    --ui-accent: #4f46e5;
+    --ui-accent-hover: #4038c7;
+    --ui-accent-contrast: #fafaf9; /* on-color for accent fills */
+
+    /* ── Color: borders ──────────────────────────────────────────────── */
+    --ui-border: #dcdcdb;
+    --ui-border-strong: #c4c4c3;
+    --ui-border-hover: #a4a4a3;
+    --ui-border-invalid: #dc2626;
+
+    /* ── Color: text ─────────────────────────────────────────────────── */
+    --ui-text-body: #232325;
+    --ui-text-subtle: #67676b;
+    --ui-text-muted: #8d8d91;
+    --ui-text-invalid: #dc2626;
+
+    /* ── Color: inputs ───────────────────────────────────────────────── */
+    --ui-input-background: #f3f3f2;
+    --ui-input-background-focus: #fafaf9;
+    --ui-input-background-invalid: #faeded;
+
+    /* ── Color: focus ────────────────────────────────────────────────── */
+    --ui-focus-ring: var(--ui-accent);
+    --ui-focus-ring-background: var(--ui-background);
+
+    /* ── Color: skeleton shimmer ─────────────────────────────────────── */
+    --ui-skeleton-bg-start: #ececeb;
+    --ui-skeleton-bg-mid: #e0e0df;
+    --ui-skeleton-bg-end: #ececeb;
+
+    /*
+     * ── Color: tone slots ───────────────────────────────────────────────
+     * The chromatic half of the tone prop API (`neutral` rides
+     * --ui-foreground/--ui-background directly). Tone NAMES are fixed —
+     * they are component props across the library — but themes reinterpret
+     * the hue (e.g. carbon softens hues with color-mix). `-contrast` is the on-color for
+     * solid fills.
+     */
+    --ui-tone-red: #dc2626;
+    --ui-tone-red-contrast: #fafaf9;
+    --ui-tone-green: #16a34a;
+    --ui-tone-green-contrast: #fafaf9;
+    --ui-tone-amber: #d97706;
+    --ui-tone-amber-contrast: #111113;
+    --ui-tone-blue: #2563eb;
+    --ui-tone-blue-contrast: #fafaf9;
+    --ui-tone-purple: #7c3aed;
+    --ui-tone-purple-contrast: #fafaf9;
+    --ui-tone-magenta: #db2777;
+    --ui-tone-magenta-contrast: #fafaf9;
+
+    /* ── Typography roles (max 3 per theme) ──────────────────────────── */
+    --ui-font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Roboto', sans-serif;
+    --ui-font-display: var(--ui-font-body);
+    --ui-font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
+    /* Display text treatment (buttons, badges) */
+    --ui-display-case: none;
+    --ui-display-tracking: 0.01em;
+
+    /* ── Radius (max 3 per theme) ────────────────────────────────────── */
+    --ui-radius-sm: 6px; /* compact controls: buttons, badges, checkboxes */
+    --ui-radius-md: 8px; /* mid surfaces: menu items, toasts, banners */
+    --ui-radius-lg: 12px; /* fields & large surfaces: inputs, cards, dialogs */
+
+    /* ── Shadows (max 3 per theme; full box-shadow strings) ──────────── */
+    --ui-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+    --ui-shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.12);
+    --ui-shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.22);
+
+    /* ── Borders ─────────────────────────────────────────────────────── */
+    --ui-border-width: 1px;
+    --ui-border-style: solid;
+
+    /* ── Motion ──────────────────────────────────────────────────────── */
+    --ui-motion-fast: 150ms;
+    --ui-motion-slow: 300ms;
+    --ui-ease: cubic-bezier(0.2, 0, 0, 1);
+  }
+}

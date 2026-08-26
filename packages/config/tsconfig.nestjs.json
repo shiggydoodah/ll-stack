@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // `node20` replaces the legacy `"module": "CommonJS"` + `"moduleResolution":
+    // "node"` (node10) pair. node10 ignores the `exports` field, which blocks
+    // every ESM-only dependency; node20 honours `exports` and models Node 22's
+    // `require(esm)`, so CommonJS-format files may import ESM-only packages.
+    // `moduleResolution` is deliberately absent - node20 implies node16
+    // resolution, so an explicit `"node16"` is accepted but redundant (tsc
+    // only rejects mismatched values like `"bundler"`, TS5109).
+    // `ignoreDeprecations: "6.0"` is gone with it; it only existed to silence
+    // the node10 deprecation.
+    //
+    // node20 is version-pinned where `nodenext` floats with future TypeScript
+    // releases, and `node16` would not help: it predates `require(esm)` and
+    // still rejects ESM-only imports from CommonJS (TS1479).
+    //
+    // Emit note for consumers: static imports and the CommonJS module wrapper
+    // are unchanged, but *dynamic* `import()` is no longer downlevelled to
+    // `Promise.resolve().then(() => require(...))` - it survives as a real ESM
+    // `import()`. That reaches Node's ESM loader, which cannot see `.ts` files,
+    // so any runner that executes TypeScript directly (ts-node, ts-jest) needs
+    // its own CommonJS override in the consuming app's tsconfig/jest config.
+    "module": "node20",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "sourceMap": true,
+    "incremental": true
+  }
+}
