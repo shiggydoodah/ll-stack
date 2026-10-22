@@ -42,7 +42,7 @@
     "@repo/config": "workspace:*",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
-    "@usebruno/cli": "4.0.0",
+    "@usebruno/cli": "4.1.0",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "eslint-plugin-react": "catalog:",
@@ -51,7 +51,7 @@
     "prettier": "catalog:",
     "prettier-plugin-tailwindcss": "catalog:",
     "prisma-lint": "0.13.1",
-    "turbo": "^2.10.12",
+    "turbo": "^2.11.9",
     "typescript": "catalog:"
   }
 }

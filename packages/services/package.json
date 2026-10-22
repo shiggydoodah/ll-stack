@@ -27,7 +27,7 @@
     "@repo/config": "workspace:*",
     "@types/node": "^24.13.3",
     "@typescript/native": "catalog:",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
