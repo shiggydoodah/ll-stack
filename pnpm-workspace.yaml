@@ -35,7 +35,12 @@ catalog:
   "@typescript/native": "npm:typescript@^7.0.2"
 
   # Zod
-  zod: "^4.4.3"
+  # Floored at 4.6.6 by GHSA-mrhx-c7xc-m3w5 (high): a schema with a constrained
+  # collection allocates before it checks the size limit, so an oversized input
+  # exhausts memory. The backend, the frontend and @repo/schema all validate
+  # request payloads with zod, so this is live runtime surface rather than tooling.
+  # See the matching 'zod@<4.6.6' override, which lifts prisma-lint's 3.x copy.
+  zod: "^4.6.7"
 
   # NestJS core
   "@nestjs/common": "^11.2.3"
@@ -95,7 +100,13 @@ catalog:
   "@tanstack/react-table": "^8.21.3"
 
   # Next.js
-  "next": "16.3.8"
+  # Floored at 16.4.1 by three advisories against >=16.0.0 <=16.4.0: unauthenticated
+  # remote code execution in the image optimizer when it is given an SVG
+  # (GHSA-2464-fhr4-w9xw, critical), unauthenticated remote code execution through a
+  # `use cache` function that returns a typed array (GHSA-673q-mjm6-r5xr, critical)
+  # and a denial of service in App Router Server Actions (GHSA-p3m5-59mp-jv5r, high).
+  # Kept as an EXACT pin, which is how this entry has always been written.
+  "next": "16.4.3"
 
   # React
   "react": "^19.2.8"
@@ -223,6 +234,51 @@ overrides:
   # override stays the only route. 1.18.0 -> 1.20.0 is two same-major minors on a
   # dev-only smoke runner.
   axios: '1.20.0'
+  # @faker-js/faker <=10.4.0 lets helpers.fake evaluate a crafted template into
+  # arbitrary code (GHSA-qxc2-j82w-r537, high). It reaches this tree through exactly one
+  # path — @usebruno/cli -> @usebruno/requests, the dev-only smoke runner — so nothing
+  # declares it directly and this scoped selector cannot downgrade a direct dep.
+  #
+  # Two things about this one are unusual, and both are deliberate.
+  # First, the override crosses a MAJOR boundary, because the advisory covers the whole
+  # 9.x line as well: @usebruno/requests declares '^9.7.0' and there is no 9.x backport,
+  # so 10.x is the only patched line. Updating the parent is not on offer — 0.22.0, the
+  # copy @usebruno/cli 4.3.0 pins, still declares the same '^9.7.0'.
+  # Second, the replacement floors at >=10.4.1, a version that was NEVER PUBLISHED to
+  # npm; 10.5.0 is the first release carrying the fix, which is what the range resolves
+  # to. Same shape as the find-my-way entry below.
+  #
+  # Crossing that boundary is safe HERE because Bruno BUNDLES faker rather than
+  # requiring it. Verified empirically: @usebruno/requests ships a 4 MB dist with faker
+  # inlined and no `require('@faker-js/faker')` at all, and its only faker call site is
+  # src/grpc/grpcMessageGenerator.js, which this repo never reaches — the collection in
+  # bruno/ is one HTTP health request. So the installed copy this override governs is
+  # not loaded by anything, and the entry is audit hygiene for a declared dependency
+  # rather than a fix to running code. Bounded to <11.
+  '@faker-js/faker@<=10.4.0': '>=10.4.1 <11'
+  # @azure/msal-node >=5.0.0-beta.0 <7.1.0 sends the authorization-code flow parameters
+  # to an endpoint the caller does not control, which discloses them to an attacker
+  # (GHSA-xcx6-jx8p-x3h5, high). Patched 7.1.0. It reaches this tree through one path —
+  # @usebruno/cli -> @usebruno/requests -> @azure/identity — so nothing declares it
+  # directly and this scoped selector cannot downgrade a direct dep.
+  #
+  # This override crosses TWO majors, and no parent update shortens the distance:
+  # @azure/identity 4.13.2 declares '^5.1.5' and 4.14.0, the newest release, declares
+  # '^6.0.0'. Upstream has not reached 7.x, so an override is the only route.
+  #
+  # Unlike the faker entry above, @azure/identity requires msal-node EXTERNALLY (three
+  # require sites in its dist), so this override does change what runs. Verified
+  # empirically against the published 7.1.2 tarball rather than assumed: every symbol
+  # identity calls at run time still exists and is still a function —
+  # ManagedIdentityApplication, ConfidentialClientApplication, PublicClientApplication,
+  # and the acquireTokenByClientCredential / acquireTokenOnBehalfOf / acquireTokenByCode
+  # / acquireTokenByDeviceCode / acquireTokenByUsernamePassword / acquireTokenInteractive
+  # methods. 7.1.2 declares engines node >=20, which this repo satisfies.
+  # The blast radius is small either way: the collection in bruno/ is one HTTP health
+  # request with no auth block, so no Azure credential flow is reachable here. Note that
+  # `pnpm bruno:run` is NOT part of `pnpm verify`, so run it by hand after a Bruno-facing
+  # dependency change. Bounded to <8.
+  '@azure/msal-node@>=5.0.0-beta.0 <7.1.0': '>=7.1.0 <8'
   # brace-expansion has had THREE DoS advisories. They landed at different times and
   # patched different major lines, but as of the 2026-07-30 release wave all three are
   # fixed on every line this tree installs, so the selectors below finally share one
@@ -530,9 +586,26 @@ overrides:
   #     Vulnerable >=2.2.0 <2.4.0, patched 2.4.0.
   # 2.4.0 is therefore the one floor that clears all five. @nestjs/platform-express
   # pins multer EXACT at 2.2.0, so no Nest 11 patch reaches it and the override stays
-  # the only route. The bound stays <3; 2.5.0 exists and the replacement admits it once
-  # it clears minimumReleaseAge.
-  'multer@>=1.0.0 <2.4.0': '>=2.4.0 <3'
+  # the only route. The bound stays <3.
+  #
+  # The floor now moves 2.4.0 -> 2.5.0 for a sixth advisory: an asynchronous fileFilter
+  # that is still pending when the request tears down leaks the upload and exhausts
+  # resources (GHSA-q7qp-rjg7-q26m, high). It names >=2.0.0 <2.5.0 as vulnerable, so
+  # 2.4.0 is inside the range and 2.5.0 is the only patched release on the 2.x line.
+  'multer@>=1.0.0 <2.5.0': '>=2.5.0 <3'
+  # body-parser >=2.0.0 <2.4.0 (backend runtime: @nestjs/platform-express -> express ->
+  # body-parser) discards the trailing bytes after a compressed request body instead of
+  # rejecting the request, so a crafted body costs unbounded decompression work
+  # (GHSA-27r3-jxmh-p828, high). Patched 2.4.0.
+  # express 5.2.1 declares '^2.2.1', so the caret admits the fix on its own and this
+  # entry is a FLOOR, not a lift: the tree held 2.3.0 only because 2.4.0 was younger
+  # than minimumReleaseAge on the install that wrote the lockfile. Keeping the floor
+  # means a later express patch that widens or re-pins its range cannot drop the tree
+  # back onto a vulnerable copy without a review signal. Selector scoped to the
+  # vulnerable range and nothing in the workspace declares body-parser directly, so it
+  # cannot downgrade a direct dep. Bounded to <3: 2.x is express 5's line and the line
+  # the advisory was audited against.
+  'body-parser@>=2.0.0 <2.4.0': '>=2.4.0 <3'
   # mysql2 reaches this tree through exactly one path: prisma pins it EXACT at 3.15.3
   # for the MySQL branch of its CLI. This repo talks to Postgres through
   # @prisma/adapter-pg, so no code path here ever opens a MySQL connection and neither
@@ -641,6 +714,28 @@ overrides:
   # line the fix landed on and the only line reviewed above, and a 9.x arriving unreviewed
   # on a lockfile refresh would land straight in the Prisma CLI path.
   'deepmerge-ts@<8.0.0': '>=8.0.0 <9'
+  # zod <4.6.6 allocates a constrained collection before it checks the size limit, so an
+  # oversized input exhausts memory (GHSA-mrhx-c7xc-m3w5, high). The catalog bump above
+  # clears every workspace copy; this entry exists for the ONE copy a catalog cannot
+  # reach — prisma-lint 0.13.1 declares zod '^3.21.4', and 0.13.1 is the newest release,
+  # so no parent update moves it.
+  #
+  # The advisory has no 3.x backport (the 3.x line ended at 3.25.76), so the override
+  # crosses the 3 -> 4 major boundary. Crossing it is safe HERE because prisma-lint's zod
+  # surface is small and its three zod-4 hazards all still behave. Verified empirically
+  # against the published 4.6.7 tarball rather than assumed: it builds schemas from
+  # z.object / z.array / z.boolean / z.enum / z.instanceof / z.record / z.string /
+  # z.union only; the one SINGLE-ARGUMENT `z.record(z.string())` (in
+  # rules/model-name-mapping-snake-case.js) still builds and still types the values, not
+  # the keys; and `.strict()`, which every rule schema ends with, still rejects an
+  # unknown key. `pnpm prisma:lint` runs these schemas on every invocation and is the
+  # first gate in `pnpm verify`, so a regression here fails loudly rather than silently.
+  #
+  # Selector scoped to the vulnerable range, so the catalog's own ^4.6.7 does not
+  # intersect it and this override cannot move a direct dependency. The replacement tracks the
+  # catalog so prisma-lint SHARES the workspace copy instead of installing a second one.
+  # Bounded to <5.
+  'zod@<4.6.6': '^4.6.7'
   # @radix-ui/react-slot 1.3.1/1.3.2 evaluate `React.createContext(mergeProps)` at
   # module scope (their short-lived SlotContext/PropsProvider). React's `react-server`
   # build omits createContext, so any Server Component graph that transitively imports
