@@ -159,7 +159,7 @@ catalog:
 
   # Build
   "@vitejs/plugin-react": "^6.1.2"
-  "vite": "^8.2.4"
+  "vite": "^8.3.5"
 
   # Tailwind
   "tailwindcss": "^4.3.3"
@@ -194,7 +194,7 @@ catalog:
   "ts-jest": "^29.4.15"
   "supertest": "^7.3.1"
   "@types/supertest": "^7.2.1"
-  "@playwright/test": "^1.62.1"
+  "@playwright/test": "^1.64.1"
   "@types/react": "^19.3.0"
   "@types/react-dom": "^19.3.0"
   "@types/express": "^5.0.1"
