@@ -35,7 +35,12 @@ catalog:
   "@typescript/native": "npm:typescript@^7.0.2"
 
   # Zod
-  zod: "^4.4.3"
+  # Floored at 4.6.6 by GHSA-mrhx-c7xc-m3w5 (high): a schema with a constrained
+  # collection allocates before it checks the size limit, so an oversized input
+  # exhausts memory. The backend, the frontend and @repo/schema all validate
+  # request payloads with zod, so this is live runtime surface rather than tooling.
+  # See the matching 'zod@<4.6.6' override, which lifts prisma-lint's 3.x copy.
+  zod: "^4.6.7"
 
   # NestJS core
   "@nestjs/common": "^11.2.3"
@@ -50,14 +55,17 @@ catalog:
   "rxjs": "^7.8.2"
 
   # Prisma
-  # Held at 7.9.0 as a security bump: @prisma/dev 0.24.14 (which prisma 7.9.0 pins)
-  # DROPS hono and @hono/node-server entirely in favour of find-my-way, which is what
-  # retires the whole hono advisory cluster at the source — see the deleted hono
-  # overrides below. Move all four @prisma/* entries together (this block plus
-  # @prisma/instrumentation in the OTel block); they are one release train.
-  "prisma": "^7.9.1"
-  "@prisma/client": "^7.9.1"
-  "@prisma/adapter-pg": "^7.9.1"
+  # Move all four @prisma/* entries together (this block plus @prisma/instrumentation
+  # in the OTel block); they are one release train.
+  # The 7.9.0 bump was a security one: @prisma/dev (which prisma pins) DROPPED hono and
+  # @hono/node-server in favour of find-my-way, which is what retired the whole hono
+  # advisory cluster at the source — see the deleted hono overrides below. 7.10.1 pins
+  # the same @prisma/dev 0.24.17, so that still holds.
+  # 7.10.1 also moves @prisma/config to deepmerge-ts 8.0.2, which is what retired the
+  # deepmerge-ts override — see the note where that entry used to be.
+  "prisma": "^7.10.1"
+  "@prisma/client": "^7.10.1"
+  "@prisma/adapter-pg": "^7.10.1"
   "pg": "^8.23.1"
   "@types/pg": "^8.23.1"
 
@@ -82,7 +90,7 @@ catalog:
   "@opentelemetry/sdk-trace-base": "^2.10.0"
   "@opentelemetry/sdk-metrics": "^2.10.0"
   "@opentelemetry/resources": "^2.10.0"
-  "@prisma/instrumentation": "^7.9.1"
+  "@prisma/instrumentation": "^7.10.1"
   "pino": "^10.4.0"
   "pino-http": "^11.0.0"
   "pino-pretty": "^13.2.0"
@@ -95,11 +103,17 @@ catalog:
   "@tanstack/react-table": "^8.21.3"
 
   # Next.js
-  "next": "16.3.8"
+  # Floored at 16.4.1 by three advisories against >=16.0.0 <=16.4.0: unauthenticated
+  # remote code execution in the image optimizer when it is given an SVG
+  # (GHSA-2464-fhr4-w9xw, critical), unauthenticated remote code execution through a
+  # `use cache` function that returns a typed array (GHSA-673q-mjm6-r5xr, critical)
+  # and a denial of service in App Router Server Actions (GHSA-p3m5-59mp-jv5r, high).
+  # Kept as an EXACT pin, which is how this entry has always been written.
+  "next": "16.4.3"
 
   # React
-  "react": "^19.2.8"
-  "react-dom": "^19.2.8"
+  "react": "^19.3.1"
+  "react-dom": "^19.3.1"
 
   # HTTP client
   "@hey-api/openapi-ts": "^0.99.0"
@@ -108,32 +122,44 @@ catalog:
   "uuid": "^14.0.3"
   "class-variance-authority": "^0.7.1"
   "clsx": "^2.1.1"
-  "lucide-react": "^1.60.0"
+  "lucide-react": "^1.61.0"
   "tailwind-merge": "^3.7.0"
 
   # UI Primitives
   "cmdk": "^1.0.0"
-  "@radix-ui/react-accordion": "^1.2.20"
-  "@radix-ui/react-scroll-area": "^1.2.18"
-  "@radix-ui/react-popover": "^1.1.23"
-  # Pinned to the same Radix release wave as react-popover/react-dialog (1.1.19) so it
-  # reuses their shared transitive deps instead of pulling a duplicate newer set.
-  "@radix-ui/react-hover-card": "1.1.23"
-  "@radix-ui/react-dialog": "^1.1.23"
-  "@radix-ui/react-tabs": "^1.1.21"
-  "@radix-ui/react-slider": "^1.4.7"
-  # Floored at 1.3.3: react-slot 1.3.1/1.3.2 call React.createContext at module scope
-  # (the SlotContext/PropsProvider experiment), which is absent under React's
-  # `react-server` build and breaks Next RSC page-data collection. 1.3.3 dropped it.
-  # See the matching overrides entry that lifts the transitive exact-1.3.1 pins.
-  "@radix-ui/react-slot": "^1.3.3"
+  # Every entry below comes from the SAME Radix release wave (published 2026-10-12), and
+  # that is what keeps the UI graph on one copy of the shared transitive packages: each
+  # of them depends on react-primitive 2.2.0, and the three that use react-slot pin it
+  # EXACT at 1.5.0. Move them together, or the odd one out drags in a second
+  # react-primitive and a second react-slot. cmdk declares wide carets
+  # (react-primitive ^2.0.2, react-dialog ^1.1.6) and shares this wave's copies after a
+  # `pnpm dedupe`; it does not need a catalog entry of its own.
+  # One older copy of react-primitive and react-slot does remain in the tree, and it is
+  # expected: @prisma/studio-core brings its own pinned Radix graph through the prisma
+  # CLI. It is not part of the frontend bundle, so it is left alone.
+  "@radix-ui/react-accordion": "^1.3.1"
+  "@radix-ui/react-scroll-area": "^1.4.0"
+  "@radix-ui/react-popover": "^1.3.1"
+  # Pinned EXACT, unlike its neighbours, so it cannot drift out of the wave on its own.
+  "@radix-ui/react-hover-card": "1.2.1"
+  "@radix-ui/react-dialog": "^1.3.1"
+  "@radix-ui/react-tabs": "^1.2.1"
+  "@radix-ui/react-slider": "^1.6.1"
+  # Tracks the react-slot version this wave's dialog/popover/scroll-area pin EXACT, so
+  # @repo/ui's direct dependency shares their copy instead of installing a second one.
+  # History worth keeping: 1.3.1 and 1.3.2 called React.createContext at module scope
+  # (the SlotContext/PropsProvider experiment), which React's `react-server` build omits,
+  # and that broke Next RSC page-data collection. 1.3.3 dropped the call and 1.5.0 still
+  # has no createContext at all — verified against the published tarball — so the
+  # override that used to lift those two versions is gone. See the note where it was.
+  "@radix-ui/react-slot": "^1.5.0"
   "react-easy-crop": "^6.2.4"
   "sonner": "^2.0.8"
   "vaul": "^1.1.2"
 
   # Build
   "@vitejs/plugin-react": "^6.1.2"
-  "vite": "^8.2.4"
+  "vite": "^8.3.5"
 
   # Tailwind
   "tailwindcss": "^4.3.3"
@@ -168,9 +194,9 @@ catalog:
   "ts-jest": "^29.4.15"
   "supertest": "^7.3.1"
   "@types/supertest": "^7.2.1"
-  "@playwright/test": "^1.62.1"
-  "@types/react": "^19.2.18"
-  "@types/react-dom": "^19.2.5"
+  "@playwright/test": "^1.64.1"
+  "@types/react": "^19.3.0"
+  "@types/react-dom": "^19.3.0"
   "@types/express": "^5.0.1"
   # Tracks the Node MAJOR the repo actually runs (.nvmrc / Dockerfiles / engines).
   # Types ahead of the runtime let tsc accept APIs that do not exist at run time,
@@ -223,6 +249,51 @@ overrides:
   # override stays the only route. 1.18.0 -> 1.20.0 is two same-major minors on a
   # dev-only smoke runner.
   axios: '1.20.0'
+  # @faker-js/faker <=10.4.0 lets helpers.fake evaluate a crafted template into
+  # arbitrary code (GHSA-qxc2-j82w-r537, high). It reaches this tree through exactly one
+  # path — @usebruno/cli -> @usebruno/requests, the dev-only smoke runner — so nothing
+  # declares it directly and this scoped selector cannot downgrade a direct dep.
+  #
+  # Two things about this one are unusual, and both are deliberate.
+  # First, the override crosses a MAJOR boundary, because the advisory covers the whole
+  # 9.x line as well: @usebruno/requests declares '^9.7.0' and there is no 9.x backport,
+  # so 10.x is the only patched line. Updating the parent is not on offer — 0.22.0, the
+  # copy @usebruno/cli 4.3.0 pins, still declares the same '^9.7.0'.
+  # Second, the replacement floors at >=10.4.1, a version that was NEVER PUBLISHED to
+  # npm; 10.5.0 is the first release carrying the fix, which is what the range resolves
+  # to. Same shape as the find-my-way entry below.
+  #
+  # Crossing that boundary is safe HERE because Bruno BUNDLES faker rather than
+  # requiring it. Verified empirically: @usebruno/requests ships a 4 MB dist with faker
+  # inlined and no `require('@faker-js/faker')` at all, and its only faker call site is
+  # src/grpc/grpcMessageGenerator.js, which this repo never reaches — the collection in
+  # bruno/ is one HTTP health request. So the installed copy this override governs is
+  # not loaded by anything, and the entry is audit hygiene for a declared dependency
+  # rather than a fix to running code. Bounded to <11.
+  '@faker-js/faker@<=10.4.0': '>=10.4.1 <11'
+  # @azure/msal-node >=5.0.0-beta.0 <7.1.0 sends the authorization-code flow parameters
+  # to an endpoint the caller does not control, which discloses them to an attacker
+  # (GHSA-xcx6-jx8p-x3h5, high). Patched 7.1.0. It reaches this tree through one path —
+  # @usebruno/cli -> @usebruno/requests -> @azure/identity — so nothing declares it
+  # directly and this scoped selector cannot downgrade a direct dep.
+  #
+  # This override crosses TWO majors, and no parent update shortens the distance:
+  # @azure/identity 4.13.2 declares '^5.1.5' and 4.14.0, the newest release, declares
+  # '^6.0.0'. Upstream has not reached 7.x, so an override is the only route.
+  #
+  # Unlike the faker entry above, @azure/identity requires msal-node EXTERNALLY (three
+  # require sites in its dist), so this override does change what runs. Verified
+  # empirically against the published 7.1.2 tarball rather than assumed: every symbol
+  # identity calls at run time still exists and is still a function —
+  # ManagedIdentityApplication, ConfidentialClientApplication, PublicClientApplication,
+  # and the acquireTokenByClientCredential / acquireTokenOnBehalfOf / acquireTokenByCode
+  # / acquireTokenByDeviceCode / acquireTokenByUsernamePassword / acquireTokenInteractive
+  # methods. 7.1.2 declares engines node >=20, which this repo satisfies.
+  # The blast radius is small either way: the collection in bruno/ is one HTTP health
+  # request with no auth block, so no Azure credential flow is reachable here. Note that
+  # `pnpm bruno:run` is NOT part of `pnpm verify`, so run it by hand after a Bruno-facing
+  # dependency change. Bounded to <8.
+  '@azure/msal-node@>=5.0.0-beta.0 <7.1.0': '>=7.1.0 <8'
   # brace-expansion has had THREE DoS advisories. They landed at different times and
   # patched different major lines, but as of the 2026-07-30 release wave all three are
   # fixed on every line this tree installs, so the selectors below finally share one
@@ -284,15 +355,18 @@ overrides:
   # If a future dependency reintroduces hono, re-add scoped overrides at >=4.12.27
   # and >=2.0.5 respectively rather than resurrecting the old <4.12.25 / <1.19.13 bounds.
   #
-  # find-my-way is what @prisma/dev 0.24.14 swapped hono OUT for (see the Prisma
-  # catalog note above), and it in turn carries an HTTP/2 request-flood DoS
-  # (GHSA-c96f-x56v-gq3h, high). It reaches the tree ONLY through @prisma/dev, which
-  # pins it EXACT at 9.6.0, so nothing declares it directly and this scoped selector
-  # cannot downgrade a direct dep. The advisory names the patch floor as 9.6.1, but
-  # that tag was never published to npm — 9.7.0 is the first release carrying the fix —
-  # so the replacement floors at >=9.6.1 (which resolves to 9.7.0) and is bounded <10
-  # to the 9.x major the advisory was audited against.
-  'find-my-way@<=9.6.0': '>=9.6.1 <10'
+  # NOTE — there is deliberately NO find-my-way override here any more either, and it is
+  # the same story one step later. find-my-way is what @prisma/dev swapped hono OUT for,
+  # and it carries an HTTP/2 request-flood DoS (GHSA-c96f-x56v-gq3h, high). The override
+  # existed because @prisma/dev pinned it EXACT at 9.6.0, which no parent update moved.
+  # Worth knowing if it ever comes back: the advisory names 9.6.1 as the patch floor, but
+  # that tag was never published to npm — 9.7.0 is the first release carrying the fix.
+  # @prisma/dev 0.24.17 now pins find-my-way EXACT at 9.7.0, above the whole advisory
+  # range, so the scoped '<=9.6.0' selector no longer intersects any declared range and
+  # governed nothing. Verified empirically rather than assumed: with the override
+  # deleted, `pnpm why -r find-my-way` still reports a single find-my-way@9.7.0.
+  # If a future dependency reintroduces a find-my-way at or below 9.6.0, re-add the
+  # scoped selector with a >=9.6.1 <10 replacement rather than a blanket one.
   #
   # fast-uri (via ajv, reached from @usebruno/cli's schema layer and prisma's
   # @prisma/streams-local) has had the SAME class of bug twice: a backslash is treated
@@ -530,9 +604,26 @@ overrides:
   #     Vulnerable >=2.2.0 <2.4.0, patched 2.4.0.
   # 2.4.0 is therefore the one floor that clears all five. @nestjs/platform-express
   # pins multer EXACT at 2.2.0, so no Nest 11 patch reaches it and the override stays
-  # the only route. The bound stays <3; 2.5.0 exists and the replacement admits it once
-  # it clears minimumReleaseAge.
-  'multer@>=1.0.0 <2.4.0': '>=2.4.0 <3'
+  # the only route. The bound stays <3.
+  #
+  # The floor now moves 2.4.0 -> 2.5.0 for a sixth advisory: an asynchronous fileFilter
+  # that is still pending when the request tears down leaks the upload and exhausts
+  # resources (GHSA-q7qp-rjg7-q26m, high). It names >=2.0.0 <2.5.0 as vulnerable, so
+  # 2.4.0 is inside the range and 2.5.0 is the only patched release on the 2.x line.
+  'multer@>=1.0.0 <2.5.0': '>=2.5.0 <3'
+  # body-parser >=2.0.0 <2.4.0 (backend runtime: @nestjs/platform-express -> express ->
+  # body-parser) discards the trailing bytes after a compressed request body instead of
+  # rejecting the request, so a crafted body costs unbounded decompression work
+  # (GHSA-27r3-jxmh-p828, high). Patched 2.4.0.
+  # express 5.2.1 declares '^2.2.1', so the caret admits the fix on its own and this
+  # entry is a FLOOR, not a lift: the tree held 2.3.0 only because 2.4.0 was younger
+  # than minimumReleaseAge on the install that wrote the lockfile. Keeping the floor
+  # means a later express patch that widens or re-pins its range cannot drop the tree
+  # back onto a vulnerable copy without a review signal. Selector scoped to the
+  # vulnerable range and nothing in the workspace declares body-parser directly, so it
+  # cannot downgrade a direct dep. Bounded to <3: 2.x is express 5's line and the line
+  # the advisory was audited against.
+  'body-parser@>=2.0.0 <2.4.0': '>=2.4.0 <3'
   # mysql2 reaches this tree through exactly one path: prisma pins it EXACT at 3.15.3
   # for the MySQL branch of its CLI. This repo talks to Postgres through
   # @prisma/adapter-pg, so no code path here ever opens a MySQL connection and neither
@@ -599,62 +690,71 @@ overrides:
   # point of keeping two of them: 7.x is cheerio's line and 8.x is jsdom's.
   'undici@>=7.0.0 <7.29.1': '>=7.29.1 <8'
   'undici@>=8.0.0 <8.10.2': '>=8.10.2 <9'
-  # valibot<=1.4.1 lets record() issue paths make flatten() throw for inherited Object
-  # property names (GHSA-5qjj-4xww-7phc, moderate). It reaches the tree ONLY through
-  # @prisma/dev (the dev-time Prisma toolkit pulled by prisma → @prisma/client), which
-  # pins it EXACT at 1.2.0, so nothing declares it directly and this scoped selector
-  # cannot downgrade a direct dep. 1.2.0 → 1.4.2 is a same-major minor; bounded to <2 so
-  # a future major cannot arrive unreviewed on a lockfile refresh.
-  'valibot@<=1.4.1': '>=1.4.2 <2'
-  # deepmerge-ts<8.0.0 recurses with no cycle detection, so two values that self-reference at
-  # the same property path merge until Node throws RangeError: Maximum call stack size
-  # exceeded (GHSA-ggr8-5vv4-36mx / CVE-2026-40345, high, CWE-674).
+  # NOTE — there is deliberately NO valibot override here any more. It covered a
+  # record() issue path that makes flatten() throw for inherited Object property names
+  # (GHSA-5qjj-4xww-7phc, moderate), and existed only because @prisma/dev — the dev-time
+  # Prisma toolkit pulled by prisma → @prisma/client — pinned valibot EXACT at 1.2.0.
+  # @prisma/dev 0.24.17 now pins it EXACT at 1.4.2, which is the patched version the
+  # override was reaching for, so the scoped '<=1.4.1' selector no longer intersects any
+  # declared range and governed nothing. Verified empirically rather than assumed: with
+  # the override deleted, `pnpm why -r valibot` still reports a single valibot@1.4.2.
+  # If a future dependency reintroduces a valibot at or below 1.4.1, re-add the scoped
+  # selector with a >=1.4.2 <2 replacement rather than a blanket one.
+  # NOTE — there is deliberately NO deepmerge-ts override here any more. It covered an
+  # unbounded recursion with no cycle detection in <8.0.0 (GHSA-ggr8-5vv4-36mx /
+  # CVE-2026-40345, high), and existed only because @prisma/config pinned deepmerge-ts
+  # EXACT at 7.1.5 with no 7.x backport available, which made a major-crossing override
+  # the one route to the fix.
+  # @prisma/config 7.10.1 pins deepmerge-ts EXACT at 8.0.2 — upstream now sits above the
+  # whole advisory range on its own, so the scoped 'deepmerge-ts@<8.0.0' selector no
+  # longer intersects any declared range and governed nothing. Verified empirically
+  # rather than assumed: with the override deleted, `pnpm why -r deepmerge-ts` still
+  # reports a single deepmerge-ts@8.0.2. Retired at the source, matching the hono and
+  # sharp notes above.
+  # If a future dependency reintroduces a deepmerge-ts below 8.0.0, re-add a scoped
+  # 'deepmerge-ts@<8.0.0': '>=8.0.0 <9' rather than a blanket one. Worth keeping from
+  # the old note: 8.x's fix is a maxDepth that defaults to 1000 and SILENTLY TRUNCATES
+  # to last-value-wins rather than throwing, and the bare `deepmerge` takes no options
+  # object, so that default is not overridable. It does not matter for a config tree,
+  # but it would matter for any dependent that merges deeply nested user data.
+  # zod <4.6.6 allocates a constrained collection before it checks the size limit, so an
+  # oversized input exhausts memory (GHSA-mrhx-c7xc-m3w5, high). The catalog bump above
+  # clears every workspace copy; this entry exists for the ONE copy a catalog cannot
+  # reach — prisma-lint 0.13.1 declares zod '^3.21.4', and 0.13.1 is the newest release,
+  # so no parent update moves it.
   #
-  # This is the ONLY override here that crosses a MAJOR boundary to reach its fix, so the
-  # usual "bound it to the major the advisory was audited against" rule cannot apply — 8.0.0
-  # IS that major. There is no 7.x backport and there will not be one: the advisory lists
-  # 8.0.0 as the sole patched version, and 7.1.6 (published five days before it) is a
-  # types-only fix for index signatures, with no cycle-detection code in its dist. Updating
-  # the parent is not on offer either — deepmerge-ts reaches this tree through exactly one
-  # path, @prisma/config, which pins it EXACT at 7.1.5, and prisma 7.9.1 is the newest
-  # stable (8.0.0 is still rc). So a major-crossing override is the only route.
+  # The advisory has no 3.x backport (the 3.x line ended at 3.25.76), so the override
+  # crosses the 3 -> 4 major boundary. Crossing it is safe HERE because prisma-lint's zod
+  # surface is small and its three zod-4 hazards all still behave. Verified empirically
+  # against the published 4.6.7 tarball rather than assumed: it builds schemas from
+  # z.object / z.array / z.boolean / z.enum / z.instanceof / z.record / z.string /
+  # z.union only; the one SINGLE-ARGUMENT `z.record(z.string())` (in
+  # rules/model-name-mapping-snake-case.js) still builds and still types the values, not
+  # the keys; and `.strict()`, which every rule schema ends with, still rejects an
+  # unknown key. `pnpm prisma:lint` runs these schemas on every invocation and is the
+  # first gate in `pnpm verify`, so a regression here fails loudly rather than silently.
   #
-  # Crossing that boundary is safe HERE because the 8.0.0 breaking changes miss the one
-  # call site. @prisma/config uses the bare `deepmerge` and nothing else — it hands it to
-  # c12 as the `merger` for loading prisma.config.ts (apps/backend/prisma.config.ts), at
-  # CLI/build time, over local trusted config objects. Against that usage 7.1.5 -> 8.0.1 is
-  # a drop-in: identical module format ("type": "module" + main ./dist/index.cjs + the same
-  # exports map), identical engines (node >=16), zero runtime deps, and a purely ADDITIVE
-  # runtime export list. Of the four documented breaks, three cannot bite — two are type
-  # renames (DeepMergeIntoFunctionUtils, DeepMergeMetaMetaData) and one is a deepmergeInto
-  # mutation fix, and @prisma/config imports no types and never calls deepmergeInto. The
-  # fourth is a real default-behaviour change — Map values are now deep-merged instead of
-  # last-value-wins — which is inert for plain-object config files.
-  # Worth knowing for the next reader: 8.0.0's fix is a `maxDepth` that defaults to 1000 and
-  # SILENTLY TRUNCATES to last-value-wins rather than throwing, and the bare `deepmerge`
-  # takes no options object, so that default is not overridable. Config trees nowhere near
-  # 1000 levels deep, so it does not matter here — but it would matter for any future
-  # dependent that merges deeply nested user data through this same forced copy.
-  #
-  # Selector scoped to the vulnerable range and nothing in the workspace declares
-  # deepmerge-ts directly, so it cannot downgrade a direct dep. Bounded to <9: 8.x is the
-  # line the fix landed on and the only line reviewed above, and a 9.x arriving unreviewed
-  # on a lockfile refresh would land straight in the Prisma CLI path.
-  'deepmerge-ts@<8.0.0': '>=8.0.0 <9'
-  # @radix-ui/react-slot 1.3.1/1.3.2 evaluate `React.createContext(mergeProps)` at
-  # module scope (their short-lived SlotContext/PropsProvider). React's `react-server`
-  # build omits createContext, so any Server Component graph that transitively imports
-  # react-slot throws "createContext is not a function" during Next's page-data
-  # collection (hit here via @repo/ui primitives in the frontend app).
-  # 1.3.3 removed that call while keeping the createSlot export react-primitive needs.
-  # react-primitive 2.1.8 and react-dialog/react-popover/react-collection all hard-pin
-  # react-slot to EXACT 1.3.1, so the catalog floor above cannot dislodge them — this
-  # override lifts those transitive pins to the fixed line. Selector scoped to the two
-  # broken versions only (1.3.0 and the 1.2.x copies are unaffected and left alone);
-  # bounded to <1.4 to stay on the 1.3.x line and not float onto an unaudited 1.4 that
-  # could reintroduce the module-scope context. Drop once every dependent's exact pin
-  # has moved off 1.3.1 on its own.
-  '@radix-ui/react-slot@>=1.3.1 <1.3.3': '>=1.3.3 <1.4'
+  # Selector scoped to the vulnerable range, so the catalog's own ^4.6.7 does not
+  # intersect it and this override cannot move a direct dependency. The replacement tracks the
+  # catalog so prisma-lint SHARES the workspace copy instead of installing a second one.
+  # Bounded to <5.
+  'zod@<4.6.6': '^4.6.7'
+  # NOTE — there is deliberately NO @radix-ui/react-slot override here any more. It
+  # lifted 1.3.1/1.3.2, which evaluate `React.createContext(mergeProps)` at module scope
+  # (their short-lived SlotContext/PropsProvider). React's `react-server` build omits
+  # createContext, so any Server Component graph that transitively imported react-slot
+  # threw "createContext is not a function" during Next's page-data collection — hit here
+  # through @repo/ui primitives in the frontend app. The override existed because
+  # react-primitive 2.1.8 and react-dialog/react-popover/react-collection all hard-pinned
+  # react-slot to an EXACT 1.3.1, which the catalog floor could not dislodge.
+  # The 2026-10-12 Radix wave moved every one of those exact pins to react-slot 1.5.0, so
+  # the scoped '>=1.3.1 <1.3.3' selector no longer intersects any declared range and
+  # governed nothing. Verified empirically rather than assumed: 1.5.0's dist contains no
+  # createContext call at all, and with the override deleted `pnpm why -r
+  # @radix-ui/react-slot` reports a single 1.5.0.
+  # If a future dependent pins react-slot back onto 1.3.1 or 1.3.2, re-add the scoped
+  # selector rather than a blanket one. The gate for this class of break is `pnpm build`
+  # in apps/frontend: RSC page-data collection is where it surfaces, not typecheck.
 
 # NOTE — there is deliberately NO auditConfig block here any more. It carried exactly
 # one entry, ignoreGhsas: [GHSA-mh99-v99m-4gvg], suppressing the brace-expansion
