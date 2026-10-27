@@ -55,14 +55,17 @@ catalog:
   "rxjs": "^7.8.2"
 
   # Prisma
-  # Held at 7.9.0 as a security bump: @prisma/dev 0.24.14 (which prisma 7.9.0 pins)
-  # DROPS hono and @hono/node-server entirely in favour of find-my-way, which is what
-  # retires the whole hono advisory cluster at the source — see the deleted hono
-  # overrides below. Move all four @prisma/* entries together (this block plus
-  # @prisma/instrumentation in the OTel block); they are one release train.
-  "prisma": "^7.9.1"
-  "@prisma/client": "^7.9.1"
-  "@prisma/adapter-pg": "^7.9.1"
+  # Move all four @prisma/* entries together (this block plus @prisma/instrumentation
+  # in the OTel block); they are one release train.
+  # The 7.9.0 bump was a security one: @prisma/dev (which prisma pins) DROPPED hono and
+  # @hono/node-server in favour of find-my-way, which is what retired the whole hono
+  # advisory cluster at the source — see the deleted hono overrides below. 7.10.1 pins
+  # the same @prisma/dev 0.24.17, so that still holds.
+  # 7.10.1 also moves @prisma/config to deepmerge-ts 8.0.2, which is what retired the
+  # deepmerge-ts override — see the note where that entry used to be.
+  "prisma": "^7.10.1"
+  "@prisma/client": "^7.10.1"
+  "@prisma/adapter-pg": "^7.10.1"
   "pg": "^8.23.1"
   "@types/pg": "^8.23.1"
 
@@ -87,7 +90,7 @@ catalog:
   "@opentelemetry/sdk-trace-base": "^2.10.0"
   "@opentelemetry/sdk-metrics": "^2.10.0"
   "@opentelemetry/resources": "^2.10.0"
-  "@prisma/instrumentation": "^7.9.1"
+  "@prisma/instrumentation": "^7.10.1"
   "pino": "^10.4.0"
   "pino-http": "^11.0.0"
   "pino-pretty": "^13.2.0"
@@ -679,41 +682,23 @@ overrides:
   # cannot downgrade a direct dep. 1.2.0 → 1.4.2 is a same-major minor; bounded to <2 so
   # a future major cannot arrive unreviewed on a lockfile refresh.
   'valibot@<=1.4.1': '>=1.4.2 <2'
-  # deepmerge-ts<8.0.0 recurses with no cycle detection, so two values that self-reference at
-  # the same property path merge until Node throws RangeError: Maximum call stack size
-  # exceeded (GHSA-ggr8-5vv4-36mx / CVE-2026-40345, high, CWE-674).
-  #
-  # This is the ONLY override here that crosses a MAJOR boundary to reach its fix, so the
-  # usual "bound it to the major the advisory was audited against" rule cannot apply — 8.0.0
-  # IS that major. There is no 7.x backport and there will not be one: the advisory lists
-  # 8.0.0 as the sole patched version, and 7.1.6 (published five days before it) is a
-  # types-only fix for index signatures, with no cycle-detection code in its dist. Updating
-  # the parent is not on offer either — deepmerge-ts reaches this tree through exactly one
-  # path, @prisma/config, which pins it EXACT at 7.1.5, and prisma 7.9.1 is the newest
-  # stable (8.0.0 is still rc). So a major-crossing override is the only route.
-  #
-  # Crossing that boundary is safe HERE because the 8.0.0 breaking changes miss the one
-  # call site. @prisma/config uses the bare `deepmerge` and nothing else — it hands it to
-  # c12 as the `merger` for loading prisma.config.ts (apps/backend/prisma.config.ts), at
-  # CLI/build time, over local trusted config objects. Against that usage 7.1.5 -> 8.0.1 is
-  # a drop-in: identical module format ("type": "module" + main ./dist/index.cjs + the same
-  # exports map), identical engines (node >=16), zero runtime deps, and a purely ADDITIVE
-  # runtime export list. Of the four documented breaks, three cannot bite — two are type
-  # renames (DeepMergeIntoFunctionUtils, DeepMergeMetaMetaData) and one is a deepmergeInto
-  # mutation fix, and @prisma/config imports no types and never calls deepmergeInto. The
-  # fourth is a real default-behaviour change — Map values are now deep-merged instead of
-  # last-value-wins — which is inert for plain-object config files.
-  # Worth knowing for the next reader: 8.0.0's fix is a `maxDepth` that defaults to 1000 and
-  # SILENTLY TRUNCATES to last-value-wins rather than throwing, and the bare `deepmerge`
-  # takes no options object, so that default is not overridable. Config trees nowhere near
-  # 1000 levels deep, so it does not matter here — but it would matter for any future
-  # dependent that merges deeply nested user data through this same forced copy.
-  #
-  # Selector scoped to the vulnerable range and nothing in the workspace declares
-  # deepmerge-ts directly, so it cannot downgrade a direct dep. Bounded to <9: 8.x is the
-  # line the fix landed on and the only line reviewed above, and a 9.x arriving unreviewed
-  # on a lockfile refresh would land straight in the Prisma CLI path.
-  'deepmerge-ts@<8.0.0': '>=8.0.0 <9'
+  # NOTE — there is deliberately NO deepmerge-ts override here any more. It covered an
+  # unbounded recursion with no cycle detection in <8.0.0 (GHSA-ggr8-5vv4-36mx /
+  # CVE-2026-40345, high), and existed only because @prisma/config pinned deepmerge-ts
+  # EXACT at 7.1.5 with no 7.x backport available, which made a major-crossing override
+  # the one route to the fix.
+  # @prisma/config 7.10.1 pins deepmerge-ts EXACT at 8.0.2 — upstream now sits above the
+  # whole advisory range on its own, so the scoped 'deepmerge-ts@<8.0.0' selector no
+  # longer intersects any declared range and governed nothing. Verified empirically
+  # rather than assumed: with the override deleted, `pnpm why -r deepmerge-ts` still
+  # reports a single deepmerge-ts@8.0.2. Retired at the source, matching the hono and
+  # sharp notes above.
+  # If a future dependency reintroduces a deepmerge-ts below 8.0.0, re-add a scoped
+  # 'deepmerge-ts@<8.0.0': '>=8.0.0 <9' rather than a blanket one. Worth keeping from
+  # the old note: 8.x's fix is a maxDepth that defaults to 1000 and SILENTLY TRUNCATES
+  # to last-value-wins rather than throwing, and the bare `deepmerge` takes no options
+  # object, so that default is not overridable. It does not matter for a config tree,
+  # but it would matter for any dependent that merges deeply nested user data.
   # zod <4.6.6 allocates a constrained collection before it checks the size limit, so an
   # oversized input exhausts memory (GHSA-mrhx-c7xc-m3w5, high). The catalog bump above
   # clears every workspace copy; this entry exists for the ONE copy a catalog cannot
