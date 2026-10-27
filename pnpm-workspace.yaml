@@ -355,15 +355,18 @@ overrides:
   # If a future dependency reintroduces hono, re-add scoped overrides at >=4.12.27
   # and >=2.0.5 respectively rather than resurrecting the old <4.12.25 / <1.19.13 bounds.
   #
-  # find-my-way is what @prisma/dev 0.24.14 swapped hono OUT for (see the Prisma
-  # catalog note above), and it in turn carries an HTTP/2 request-flood DoS
-  # (GHSA-c96f-x56v-gq3h, high). It reaches the tree ONLY through @prisma/dev, which
-  # pins it EXACT at 9.6.0, so nothing declares it directly and this scoped selector
-  # cannot downgrade a direct dep. The advisory names the patch floor as 9.6.1, but
-  # that tag was never published to npm — 9.7.0 is the first release carrying the fix —
-  # so the replacement floors at >=9.6.1 (which resolves to 9.7.0) and is bounded <10
-  # to the 9.x major the advisory was audited against.
-  'find-my-way@<=9.6.0': '>=9.6.1 <10'
+  # NOTE — there is deliberately NO find-my-way override here any more either, and it is
+  # the same story one step later. find-my-way is what @prisma/dev swapped hono OUT for,
+  # and it carries an HTTP/2 request-flood DoS (GHSA-c96f-x56v-gq3h, high). The override
+  # existed because @prisma/dev pinned it EXACT at 9.6.0, which no parent update moved.
+  # Worth knowing if it ever comes back: the advisory names 9.6.1 as the patch floor, but
+  # that tag was never published to npm — 9.7.0 is the first release carrying the fix.
+  # @prisma/dev 0.24.17 now pins find-my-way EXACT at 9.7.0, above the whole advisory
+  # range, so the scoped '<=9.6.0' selector no longer intersects any declared range and
+  # governed nothing. Verified empirically rather than assumed: with the override
+  # deleted, `pnpm why -r find-my-way` still reports a single find-my-way@9.7.0.
+  # If a future dependency reintroduces a find-my-way at or below 9.6.0, re-add the
+  # scoped selector with a >=9.6.1 <10 replacement rather than a blanket one.
   #
   # fast-uri (via ajv, reached from @usebruno/cli's schema layer and prisma's
   # @prisma/streams-local) has had the SAME class of bug twice: a backslash is treated
@@ -687,13 +690,16 @@ overrides:
   # point of keeping two of them: 7.x is cheerio's line and 8.x is jsdom's.
   'undici@>=7.0.0 <7.29.1': '>=7.29.1 <8'
   'undici@>=8.0.0 <8.10.2': '>=8.10.2 <9'
-  # valibot<=1.4.1 lets record() issue paths make flatten() throw for inherited Object
-  # property names (GHSA-5qjj-4xww-7phc, moderate). It reaches the tree ONLY through
-  # @prisma/dev (the dev-time Prisma toolkit pulled by prisma → @prisma/client), which
-  # pins it EXACT at 1.2.0, so nothing declares it directly and this scoped selector
-  # cannot downgrade a direct dep. 1.2.0 → 1.4.2 is a same-major minor; bounded to <2 so
-  # a future major cannot arrive unreviewed on a lockfile refresh.
-  'valibot@<=1.4.1': '>=1.4.2 <2'
+  # NOTE — there is deliberately NO valibot override here any more. It covered a
+  # record() issue path that makes flatten() throw for inherited Object property names
+  # (GHSA-5qjj-4xww-7phc, moderate), and existed only because @prisma/dev — the dev-time
+  # Prisma toolkit pulled by prisma → @prisma/client — pinned valibot EXACT at 1.2.0.
+  # @prisma/dev 0.24.17 now pins it EXACT at 1.4.2, which is the patched version the
+  # override was reaching for, so the scoped '<=1.4.1' selector no longer intersects any
+  # declared range and governed nothing. Verified empirically rather than assumed: with
+  # the override deleted, `pnpm why -r valibot` still reports a single valibot@1.4.2.
+  # If a future dependency reintroduces a valibot at or below 1.4.1, re-add the scoped
+  # selector with a >=1.4.2 <2 replacement rather than a blanket one.
   # NOTE — there is deliberately NO deepmerge-ts override here any more. It covered an
   # unbounded recursion with no cycle detection in <8.0.0 (GHSA-ggr8-5vv4-36mx /
   # CVE-2026-40345, high), and existed only because @prisma/config pinned deepmerge-ts
